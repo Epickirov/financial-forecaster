@@ -693,20 +693,27 @@
   // week-tile picker: months listed, current week highlighted (gold), selected
   // (leaf); hovering a tile shows its distance from "today" (+x周 / 本周).
   function weekPicker(arr, idx, key, sel, V) {
+    var W = V.weeksList, cur = V.curW;
+    // selectable weeks: current week and later only (no past / negative)
     var byMonth = {}, order = [];
-    V.weeksList.forEach(function (w) { if (!byMonth[w.month]) { byMonth[w.month] = []; order.push(w.month); } byMonth[w.month].push(w); });
-    var groups = order.map(function (m) {
+    W.forEach(function (w) { if (w.idx < cur) return; if (!byMonth[w.month]) { byMonth[w.month] = []; order.push(w.month); } byMonth[w.month].push(w); });
+    var months = order.map(function (m) {
       var tiles = byMonth[m].map(function (w) {
-        var isSel = w.idx === sel, isCur = w.idx === V.curW, diff = w.idx - V.curW;
-        var tip = diff === 0 ? '本周' : (diff > 0 ? '+' + diff + '周' : diff + '周');
+        var isSel = w.idx === sel, isCur = w.idx === cur, diff = w.idx - cur;
+        var tip = diff === 0 ? '本周' : '+' + diff + '周';
         var bg = isSel ? 'var(--leaf)' : (isCur ? '#f6edda' : '#fff');
         var col = isSel ? '#fff' : 'var(--ink)';
         var bd = isSel ? 'var(--leaf)' : (isCur ? 'var(--gold)' : 'var(--line)');
-        return '<button data-action="pickWeek" data-arr="' + arr + '" data-idx="' + idx + '" data-key="' + key + '" data-week="' + w.idx + '" title="' + tip + '" style="flex:none; cursor:pointer; border:1px solid ' + bd + '; background:' + bg + '; color:' + col + '; border-radius:6px; padding:2px 5px; font-size:9.5px; line-height:1.2; min-width:40px;' + (isCur && !isSel ? ' font-weight:700;' : '') + '"><div style="font-size:8px; opacity:.65;">第' + (w.idx + 1) + '周</div><div class="num">' + esc(w.label) + '</div></button>';
+        return '<button data-action="pickWeek" data-arr="' + arr + '" data-idx="' + idx + '" data-key="' + key + '" data-week="' + w.idx + '" title="' + tip + '" style="flex:none; cursor:pointer; border:1px solid ' + bd + '; background:' + bg + '; color:' + col + '; border-radius:6px; padding:2px 6px; font-size:9.5px; line-height:1.2; min-width:46px;' + (isCur && !isSel ? ' font-weight:700;' : '') + '"><div style="font-size:8px; opacity:.65;">第' + (w.idx + 1) + '周' + (isCur ? '·本周' : '') + '</div><div class="num">' + esc(w.label) + '</div></button>';
       }).join('');
-      return '<div style="margin-bottom:4px;"><div style="font-size:9px; color:var(--muted); margin-bottom:2px;">' + m + '月</div><div style="display:flex; flex-wrap:wrap; gap:3px;">' + tiles + '</div></div>';
+      return '<details style="margin-bottom:3px;"><summary style="font-size:11px; color:var(--plum2); font-weight:600; padding:3px 6px; background:#faf6ee; border-radius:6px;">' + m + '月 · ' + byMonth[m].length + '周</summary><div style="display:flex; flex-wrap:wrap; gap:3px; padding:5px 2px 2px;">' + tiles + '</div></details>';
     }).join('');
-    return '<div style="max-height:140px; overflow-y:auto; border:1px solid var(--line); border-radius:8px; padding:6px; background:#fffdf8;">' + groups + '</div>';
+    var selW = (sel === '' || sel == null) ? null : W[sel];
+    var trigger = selW ? ('已选 第' + (selW.idx + 1) + '周 · ' + esc(selW.label)) : '点击选择周次';
+    return '<details style="border:1px solid var(--line); border-radius:8px; background:#fffdf8;">' +
+      '<summary style="padding:7px 10px; font-size:12px; font-weight:600; color:' + (selW ? 'var(--leaf)' : 'var(--muted)') + '; display:flex; justify-content:space-between; align-items:center; gap:8px;"><span>' + trigger + '</span><span style="color:var(--muted); font-size:10px; flex:none;">▾ 选择月/周</span></summary>' +
+      '<div style="max-height:200px; overflow-y:auto; padding:6px 8px; border-top:1px solid var(--line);">' + (months || '<div style="font-size:11px; color:var(--muted); padding:6px;">无可选周次</div>') + '</div>' +
+    '</details>';
   }
 
   // ---------- 苗 / 花 应付款 (combined; 国内/国外; week-keyed; bucket summary) --

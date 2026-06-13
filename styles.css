@@ -66,6 +66,10 @@ main table tbody tr:nth-child(2n){ background:rgba(122,96,60,.045); }
 /* generic helpers for elements built by app.js */
 button{ font-family:inherit; }
 select.fld{ -webkit-appearance:none; appearance:none; }
+/* week-picker disclosures (months → weeks): hide the default triangle */
+summary{ cursor:pointer; list-style:none; user-select:none; }
+summary::-webkit-details-marker{ display:none; }
+summary::marker{ content:''; }
 
 @media print{
   .no-print{ display:none!important; }
