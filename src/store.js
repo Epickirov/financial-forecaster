@@ -19,10 +19,13 @@
 
   var STORAGE_KEY = 'kmty.finance.v4'; // bumped from v3: abandons any cached state that still held seeded financials
 
-  // local (not UTC) current date as YYYY-MM-DD — the default 截至 (as-of) day
+  // current date in China Standard Time (UTC+8, no DST) as YYYY-MM-DD — the
+  // default 截至 (as-of) day. Computed from the UTC epoch + 8h and read via
+  // getUTC*, so it's correct no matter what timezone the viewer's device uses.
   function todayISO() {
-    var d = new Date(), m = d.getMonth() + 1, day = d.getDate();
-    return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+    var cst = new Date(Date.now() + 8 * 3600000);
+    var m = cst.getUTCMonth() + 1, day = cst.getUTCDate();
+    return cst.getUTCFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
   }
 
   // ---------- seeded default model (BLANK template) -----------------------
