@@ -19,6 +19,12 @@
 
   var STORAGE_KEY = 'kmty.finance.v4'; // bumped from v3: abandons any cached state that still held seeded financials
 
+  // local (not UTC) current date as YYYY-MM-DD — the default 截至 (as-of) day
+  function todayISO() {
+    var d = new Date(), m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+  }
+
   // ---------- seeded default model (BLANK template) -----------------------
   // Ships with NO financial figures. Balances, prices, quantities, rates,
   // costs, sales/purchases, actuals, and receivable/payable amounts + due
@@ -32,7 +38,7 @@
     return {
       page: 'dash',
       weekIdx: 0,
-      config: { name: '昆明统一生物', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: '2026-06-10', unit: '万', openingBalance: '' },
+      config: { name: '昆明统一生物', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: todayISO(), unit: '万', openingBalance: '' },
       assume: {
         priceDomLarge: '', priceDomSmall: '', priceForLarge: '', priceForSmall: '',
         priceCut: '', priceDye: '',

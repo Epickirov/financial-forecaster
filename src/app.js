@@ -126,7 +126,7 @@
     var arWeekCollect = S.customers.reduce(function (s, c, ci) { return s + num(S.collect[ci + ':' + curW]); }, 0);
 
     var dashKpis = [
-      { label: '现可用款 / 期初', val: fmt(open0), color: 'var(--plum)', sub: '财年起始余额', subColor: 'var(--muted)' },
+      { label: '现可用款 / 期初', val: fmt(open0), color: 'var(--plum)', sub: '农业财年起始余额', subColor: 'var(--muted)' },
       { label: '全年收款', val: fmt(totalCin), color: 'var(--leaf)', sub: '实际 ' + wan(histCin) + '万 + 预测 ' + wan(fcstCin) + '万', subColor: 'var(--muted)' },
       { label: '全年支出', val: fmt(totalPay), color: 'var(--rose)', sub: '7 大类合计', subColor: 'var(--muted)' },
       { label: '年末预计余额', val: fmt(yearEnd), color: 'var(--plum2)', sub: (yearEnd >= open0 ? '↑ 较期初增长' : '↓ 较期初下降'), subColor: yearEnd >= open0 ? 'var(--leaf)' : 'var(--rose)' },
@@ -266,7 +266,7 @@
     // ---- report ----
     var profit = totalCin - totalPay;
     var repLines = [
-      '本财年（' + fy + '）期初可用资金 ' + fmt(open0) + '，预计年末余额 ' + fmt(yearEnd) + '，较期初' + (yearEnd >= open0 ? '增长' : '下降') + ' ' + fmt(Math.abs(yearEnd - open0)) + '。',
+      '本农业财年（' + fy + '）期初可用资金 ' + fmt(open0) + '，预计年末余额 ' + fmt(yearEnd) + '，较期初' + (yearEnd >= open0 ? '增长' : '下降') + ' ' + fmt(Math.abs(yearEnd - open0)) + '。',
       '全年预计收款 ' + fmt(totalCin) + '（实际 ' + fmt(histCin) + ' + 预测 ' + fmt(fcstCin) + '），合计支出 ' + fmt(totalPay) + '，全年净现金流 ' + (profit >= 0 ? '盈余' : '缺口') + ' ' + fmt(Math.abs(profit)) + '。',
       '现金最紧张出现在 ' + (minWeek ? minWeek.w.month + '月' : '—') + '，余额降至 ' + fmt(minClose) + (minClose < 1000000 ? '，需重点关注流动性' : '，整体安全') + '。',
       '应收账款合计 ' + fmt(arOut) + '，来自 ' + S.customers.length + ' 位客户，是后续回款的主要来源。'
@@ -349,7 +349,7 @@
         '</div>' +
         '<div style="flex:1;"></div>' +
         '<div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); border-radius:11px; padding:7px 11px; flex-wrap:wrap;">' +
-          '<span style="font-size:11px; color:#ece0c8; font-weight:600;">财年</span>' +
+          '<span style="font-size:11px; color:#ece0c8; font-weight:600;">农业财年</span>' +
           '<input class="fld" type="date" ' + bCfg('startISO') + ' value="' + escA(V.cfg.startISO) + '" style="border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">' +
           '<span style="color:#ece0c8;">→</span>' +
           '<input class="fld" type="date" ' + bCfg('endISO') + ' value="' + escA(V.cfg.endISO) + '" style="border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">' +
@@ -357,22 +357,28 @@
           '<span style="font-size:11px; color:#ece0c8; font-weight:600;">截至</span>' +
           '<input class="fld" type="date" ' + bCfg('asOfISO') + ' value="' + escA(V.cfg.asOfISO) + '" style="border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">' +
           '<span style="width:1px; height:20px; background:rgba(255,255,255,.2); margin:0 3px;"></span>' +
-          '<span style="font-size:11px; color:#ece0c8; font-weight:600;">期初(元)</span>' +
-          '<input class="fld" inputmode="decimal" ' + bCfg('openingBalance') + ' value="' + escA(V.cfg.openingBalance) + '" title="财年起始可用资金（元）" style="width:118px; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">' +
+          '<span style="font-size:11px; color:#ece0c8; font-weight:600;">起初资金(元)</span>' +
+          '<input class="fld" inputmode="decimal" ' + bCfg('openingBalance') + ' value="' + escA(V.cfg.openingBalance) + '" title="农业财年起始可用资金（元）" style="width:118px; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">' +
         '</div>' +
         '<button data-action="toggleUnit" style="background:#f4efe3; color:#5a472b; border:none; border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:700; cursor:pointer;">' + esc(V.unitLabel) + '</button>' +
       '</header>';
   }
 
   function chips(list) {
-    return '<div class="chips" style="display:flex; gap:7px; overflow-x:auto; padding-bottom:4px;">' +
-      list.map(function (w) {
-        return '<button data-action="selectWeek" data-idx="' + w.idx + '" style="flex:none; cursor:pointer; border:1px solid ' + w.selBd + '; background:' + w.selBg + '; color:' + w.selColor + '; border-radius:10px; padding:7px 12px 8px; min-width:90px; box-shadow:' + w.selShadow + ';">' +
-          '<div style="font-size:9px; opacity:.7;">' + esc(w.month) + '</div>' +
-          '<div class="num" style="font-size:12px; font-weight:600;">' + esc(w.label) + '</div>' +
-          (w.net != null ? '<div class="num" style="font-size:10px; color:' + w.netColor + ';">' + esc(w.net) + '万</div>' : '') +
-          '</button>';
-      }).join('') + '</div>';
+    var arrow = function (dir, sym) {
+      return '<button data-action="scrollChips" data-dir="' + dir + '" class="no-print" aria-label="' + (dir < 0 ? '更早的周' : '更晚的周') + '" style="flex:none; align-self:center; width:28px; height:28px; border:1px solid var(--line); background:#fff; color:var(--muted); border-radius:8px; cursor:pointer; font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center;">' + sym + '</button>';
+    };
+    return '<div style="display:flex; align-items:stretch; gap:7px;">' + arrow(-1, '‹') +
+      '<div class="chips" id="weekChipScroll" style="display:flex; gap:7px; overflow-x:auto; padding-bottom:4px; flex:1; min-width:0; scroll-behavior:smooth;">' +
+        list.map(function (w) {
+          return '<button data-action="selectWeek" data-idx="' + w.idx + '" style="flex:none; cursor:pointer; border:1px solid ' + w.selBd + '; background:' + w.selBg + '; color:' + w.selColor + '; border-radius:10px; padding:7px 12px 8px; min-width:90px; box-shadow:' + w.selShadow + ';">' +
+            '<div style="font-size:9px; opacity:.7;">第' + (w.idx + 1) + '周 · ' + esc(w.month) + '</div>' +
+            '<div class="num" style="font-size:12px; font-weight:600;">' + esc(w.label) + '</div>' +
+            (w.net != null ? '<div class="num" style="font-size:10px; color:' + w.netColor + ';">' + esc(w.net) + '万</div>' : '') +
+            '</button>';
+        }).join('') +
+      '</div>' + arrow(1, '›') +
+    '</div>';
   }
 
   function cashChart(V, idprefix, dashedForecast) {
@@ -691,7 +697,7 @@
     return '<div>' +
       '<div class="no-print" style="display:flex; justify-content:flex-end; margin-bottom:14px;"><button data-action="print" style="background:var(--plum); color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer;">打印 / 导出 PDF</button></div>' +
       '<div class="print-area" style="background:#fff; border-radius:16px; padding:42px 48px; box-shadow:0 14px 40px -24px rgba(60,42,28,.45); border:1px solid var(--line); max-width:920px; margin:0 auto;">' +
-        '<div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid var(--plum); padding-bottom:18px; margin-bottom:24px;"><div><div class="serif" style="font-size:23px; font-weight:900; color:var(--plum2); white-space:nowrap;">' + esc(V.repCompany) + ' · 财务预测报告</div><div style="font-size:13px; color:var(--muted); margin-top:6px;">财年 ' + esc(V.repFy) + '</div></div><div class="serif" style="width:46px; height:46px; border-radius:13px; background:#6e8348; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:22px;">兰</div></div>' +
+        '<div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid var(--plum); padding-bottom:18px; margin-bottom:24px;"><div><div class="serif" style="font-size:23px; font-weight:900; color:var(--plum2); white-space:nowrap;">' + esc(V.repCompany) + ' · 财务预测报告</div><div style="font-size:13px; color:var(--muted); margin-top:6px;">农业财年 ' + esc(V.repFy) + '</div></div><div class="serif" style="width:46px; height:46px; border-radius:13px; background:#6e8348; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:22px;">兰</div></div>' +
         '<div class="serif" style="font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">关键指标</div>' +
         '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px;">' + kpis + '</div>' +
         '<div class="serif" style="font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">情况说明</div>' +
@@ -805,6 +811,7 @@
       case 'reset': if (confirm('确定重置所有数据？此操作不可撤销。')) store.reset(); break;
       case 'toggleUnit': store.toggleUnit(); break;
       case 'selectWeek': store.selectWeek(+btn.dataset.idx); break;
+      case 'scrollChips': { var sc = document.getElementById('weekChipScroll'); if (sc && sc.scrollBy) sc.scrollBy({ left: (+btn.dataset.dir) * Math.max(sc.clientWidth * 0.8, 200), behavior: 'smooth' }); break; }
       case 'addRow': store.addRow(btn.dataset.arr); break;
       case 'delRow': store.delRow(btn.dataset.arr, +btn.dataset.idx); break;
       case 'addAssume': store.addAssumeItem(btn.dataset.group); break;
