@@ -770,6 +770,24 @@
     wireChart();
   }
 
+  // ---- coalesced rendering (perf) -------------------------------------
+  // A render rebuilds the whole page (50-week series, chart, every panel) and
+  // restores focus. Doing that synchronously on every keystroke is what made
+  // typing lag. So edit-driven renders are debounced: while you keep typing the
+  // input stays native/responsive, and derived values (KPIs, chart, totals)
+  // refresh shortly after you pause. Clicks flush immediately for snappy
+  // navigation, and tests force synchronous rendering via FFApp.enterWithState.
+  var syncRender = false, _renderTimer = null;
+  function scheduleRender(state) {
+    if (syncRender) { render(state); return; }
+    if (_renderTimer) clearTimeout(_renderTimer);
+    _renderTimer = setTimeout(function () { _renderTimer = null; if (store) render(store.state); }, 60);
+  }
+  function flushRender() {
+    if (_renderTimer) { clearTimeout(_renderTimer); _renderTimer = null; }
+    if (store) render(store.state);
+  }
+
   // chart hover (re-bound each render since the SVG is rebuilt)
   function wireChart() {
     var rect = document.getElementById('cashHover');
@@ -843,6 +861,10 @@
       case 'logout': doLogout(); break;
       case 'authToggle': e.preventDefault(); authTab = (authTab === 'signup' ? 'login' : 'signup'); authError = ''; renderAuth(); break;
     }
+    // Clicks that change state should feel instant — flush the debounced
+    // render now. (scrollChips only scrolls the DOM; print/auth manage their
+    // own view, so skip those.)
+    if (a !== 'scrollChips' && a !== 'print' && a !== 'logout' && a !== 'authToggle') flushRender();
   }
 
   function doLogout() {
@@ -958,7 +980,7 @@
   function enterApp(prefetchedState) {
     function mount(serverState) {
       store = new FFStore.Store(new FFStore.RemoteAdapter(), mergeDefault(serverState));
-      store.subscribe(render);
+      store.subscribe(scheduleRender);
       render(store.state);
       window.FFApp.store = store;
       window.FFApp.user = currentUser;
@@ -998,7 +1020,7 @@
     window.FFApp = {
       store: null, engine: E, buildView: buildView, user: null,
       rerender: function () { if (store) render(store.state); },
-      enterWithState: function (state) { enterApp(state); }
+      enterWithState: function (state) { syncRender = true; enterApp(state); }
     };
 
     start();

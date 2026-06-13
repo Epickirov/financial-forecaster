@@ -153,7 +153,7 @@
   Store.prototype._persist = function () {
     var self = this;
     if (this._saveTimer) clearTimeout(this._saveTimer);
-    this._saveTimer = setTimeout(function () { self.adapter.save(self.state); }, 250);
+    this._saveTimer = setTimeout(function () { self.adapter.save(self.state); }, 600);
   };
 
   // generic top-level merge (page / weekIdx etc.)
