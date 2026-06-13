@@ -102,6 +102,12 @@
       frac = Math.max(0, Math.min(ser.length - 1, frac));
       return +xs(frac).toFixed(1);
     })();
+    // Extend the solid ACTUAL line flat to the 今天 mark: the in-progress week
+    // has no actuals yet, so carry the last known balance forward. This keeps
+    // "solid behind today, dotted (forecast) ahead" aligned exactly to the mark.
+    if (asOfX > +xs(lastHist).toFixed(1)) {
+      actualPts += (actualPts ? ' ' : '') + asOfX + ',' + (+ys(acCloses[lastHist]).toFixed(1));
+    }
     var yTicks = [0, 1, 2, 3].map(function (k) { var v = maxV - span * (k / 3); return { y: pt + ih * (k / 3) + 3, label: wan(v, 0) }; });
     var xTicks = ser.filter(function (_, i) { return i % Math.ceil(ser.length / 7) === 0; }).map(function (s) { return { x: +xs(s.i).toFixed(1), label: s.w.month + '月' }; });
 
