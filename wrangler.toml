@@ -1,0 +1,7 @@
+# Cloudflare Pages config — kmty-financial-forecaster
+# Shared account: this is the ONLY project we own here. Do not touch others.
+# Secrets live in the cloud environment (CLOUDFLARE_API_TOKEN / _ACCOUNT_ID),
+# never in this file.
+name = "kmty-financial-forecaster"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-06-13"
