@@ -135,7 +135,7 @@
     var yearEnd = ser.length ? ser[ser.length - 1].close : 0;
     var minClose = Math.min.apply(null, acCloses);
     var minWeek = ser.find(function (s) { return s.close === minClose; });
-    var arTotal = S.customers.reduce(function (s, c) { return s + num(c.outstanding); }, 0);
+    var arTotal = S.customers.reduce(function (s, c) { return s + E.customerOutstanding(S, c.id); }, 0);
 
     // ---- selected week ----
     var selIdx = Math.min(Math.max(S.weekIdx | 0, 0), Math.max(ser.length - 1, 0));
@@ -146,7 +146,7 @@
     var curW = E.currentWeekIdx(S);
     var _aop = (S.config.asOfISO || '').split('-');
     var asOfMD = _aop.length === 3 ? (+_aop[1]) + '月' + (+_aop[2]) + '日' : '';
-    var arWeekCollect = S.customers.reduce(function (s, c, ci) { return s + num(S.collect[ci + ':' + curW]); }, 0);
+    var arWeekCollect = (function () { var d = E.arDueInWeek(S, curW); return d.foreign + d.domestic; })();
 
     var dashKpis = [
       { label: '现可用款 / 期初', val: fmt(open0), color: 'var(--plum)', sub: '农历财年起始余额', subColor: 'var(--muted)' },
@@ -293,17 +293,21 @@
       { gid: 'opex', title: '人工 · 水电 · 运费 · 其他', desc: '每月固定运营支出', sym: '⚙', fields: [fld('payrollMonthly', '工资社保税费', '元/月'), fld('utilitiesMonthly', '水电费', '元/月'), fld('freightMonthly', '运费', '元/月'), fld('projectsMonthly', '项目及工程', '元/月'), fld('travelWeekly', '差旅招待（每周）', '元/周'), fld('loanMonthly', '房贷/借款', '元/月')], custom: grpCustom('opex') }
     ];
 
-    // ---- receivables ----
+    // ---- receivables (per customer: shipments → outstanding; collection week) ----
+    var allArShip = S.arShipments || [];
     var custRows = S.customers.map(function (c, i) {
-      var ck = i + ':' + selIdx;
-      return { idx: i, name: c.name, outstanding: c.outstanding, note: c.note, cat: c.cat || '国内', catColor: E.AR_CAT_COLORS[c.cat] || '#c96442', collectKey: ck, collect: S.collect[ck] != null ? S.collect[ck] : '', barW: 0 };
+      var ships = [];
+      allArShip.forEach(function (sh, si) { if (sh.custId === c.id) ships.push({ si: si, value: sh.value != null ? sh.value : '', date: sh.date != null ? sh.date : '' }); });
+      var out = E.customerOutstanding(S, c.id);
+      return { idx: i, id: c.id, name: c.name, note: c.note, cat: c.cat || '国内', catColor: E.AR_CAT_COLORS[c.cat] || '#c96442',
+        collectWeek: (c.collectWeek === '' || c.collectWeek == null) ? '' : parseInt(c.collectWeek, 10),
+        outstanding: out, outstandingStr: yuan0(out), ships: ships, barW: 0 };
     });
-    var arMax = Math.max.apply(null, S.customers.map(function (c) { return num(c.outstanding); }).concat([1]));
-    custRows.forEach(function (c) { c.barW = (num(c.outstanding) / arMax * 100).toFixed(0) + '%'; });
-    var arOut = S.customers.reduce(function (s, c) { return s + num(c.outstanding); }, 0);
-    var arCol = S.customers.reduce(function (s, c, i) { return s + num(S.collect[i + ':' + selIdx]); }, 0);
+    var arMax = Math.max.apply(null, custRows.map(function (c) { return c.outstanding; }).concat([1]));
+    custRows.forEach(function (c) { c.barW = (c.outstanding / arMax * 100).toFixed(0) + '%'; });
+    var arOut = custRows.reduce(function (s, c) { return s + c.outstanding; }, 0);
     var catSummary = E.AR_CATS.map(function (cat) {
-      return { cat: cat, color: E.AR_CAT_COLORS[cat], val: fmt(S.customers.reduce(function (s, c) { return s + ((c.cat || '国内') === cat ? num(c.outstanding) : 0); }, 0)) };
+      return { cat: cat, color: E.AR_CAT_COLORS[cat], val: fmt(S.customers.reduce(function (s, c) { return s + ((c.cat || '国内') === cat ? E.customerOutstanding(S, c.id) : 0); }, 0)) };
     });
 
     // ---- report ----
@@ -351,7 +355,7 @@
       shipmentRows: shipmentRows, payablesView: payablesView, bucketsMiao: bucketsMiao, bucketsHua: bucketsHua,
       freightTotal: fmt(freightTotal), weeksList: weeksList, curW: curW, urgencyOptions: E.URGENCY_OPTIONS,
       upcoming: upcoming, assumeGroups: assumeGroups, rents: S.rents, fixed: S.fixed,
-      custRows: custRows, arOutWan: fmt(arOut), arColWan: fmt(arCol), catSummary: catSummary, catOptions: E.AR_CATS,
+      custRows: custRows, arOutWan: fmt(arOut), catSummary: catSummary, catOptions: E.AR_CATS,
       repCompany: S.config.name, repFy: fy, repKpis: repKpis, repLines: repLines
     };
   }
@@ -372,7 +376,7 @@
     return '' +
       '<header class="no-print bg-fabric" style="display:flex; align-items:center; gap:16px; padding:10px 24px; border-bottom:1px solid #d9cfb9; position:sticky; top:0; z-index:30;">' +
         '<div style="display:flex; align-items:center; gap:11px; flex:none;">' +
-          '<div style="width:34px; height:34px; border-radius:9px; background:#6e8348; display:flex; align-items:center; justify-content:center; color:#f4f1e6; font-weight:700; font-size:18px;" class="serif">兰</div>' +
+          logoBox(34, 9) +
           '<div style="line-height:1.18;">' +
             '<div style="font-weight:700; font-size:13.5px; letter-spacing:.2px; white-space:nowrap;">昆明统一生物科技有限公司</div>' +
             '<div style="font-size:10.5px; color:var(--muted); letter-spacing:1.5px;">财务分析系统 · v1.0</div>' +
@@ -446,6 +450,15 @@
   }
 
   function card(inner, extra) { return '<div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);' + (extra || '') + '">' + inner + '</div>'; }
+  // company mark — inline SVG (green check + red bud), no external asset
+  function logoSVG(px) {
+    return '<svg viewBox="0 0 110 110" width="' + px + '" height="' + px + '" style="display:block;" role="img" aria-label="logo">' +
+      '<path d="M18 54 L47 88 L95 26" fill="none" stroke="#16a34a" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<ellipse cx="55" cy="35" rx="14" ry="18" fill="#e0231a"/></svg>';
+  }
+  function logoBox(px, radius) {
+    return '<div style="width:' + px + 'px; height:' + px + 'px; border-radius:' + radius + 'px; background:#fff; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -10px rgba(60,42,28,.4); flex:none;">' + logoSVG(Math.round(px * 0.72)) + '</div>';
+  }
   function h2(t) { return '<div class="serif" style="font-size:17px; font-weight:700;">' + esc(t) + '</div>'; }
 
   // ---------- DASHBOARD ----------
@@ -779,35 +792,46 @@
 
   // ---------- RECEIVABLES ----------
   function renderAr(V) {
+    var catOpt = function (sel) { return V.catOptions.map(function (o) { return '<option value="' + escA(o) + '"' + (o === sel ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join(''); };
     var cats = V.catSummary.map(function (c) {
       return '<div style="background:#fff; border-radius:13px; padding:12px 15px; box-shadow:0 8px 22px -18px rgba(60,42,28,.4); border:1px solid var(--line); border-left:4px solid ' + c.color + ';"><div style="font-size:12px; color:var(--muted);">' + esc(c.cat) + '</div><div class="num" style="font-size:18px; font-weight:600; margin-top:4px; color:var(--plum2);">' + esc(c.val) + '</div></div>';
     }).join('');
-    var catOpt = function (sel) { return V.catOptions.map(function (o) { return '<option value="' + escA(o) + '"' + (o === sel ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join(''); };
-    var rows = V.custRows.map(function (c) {
-      return '<tr>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld txt" ' + bArr('customers', c.idx, 'name') + ' value="' + escA(c.name) + '" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px;"></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><select class="fld txt" ' + bArr('customers', c.idx, 'cat') + ' style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 4px; font-size:11.5px; font-weight:600; color:' + c.catColor + ';">' + catOpt(c.cat) + '</select></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld txt" ' + bArr('customers', c.idx, 'note') + ' value="' + escA(c.note) + '" placeholder="—" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:12px;"></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" ' + bArr('customers', c.idx, 'outstanding') + ' value="' + escA(c.outstanding) + '" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px;"></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" ' + bMap('collect', c.collectKey) + ' value="' + escA(c.collect) + '" placeholder="0" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px;"></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><div style="height:8px; background:#ece4d6; border-radius:4px; overflow:hidden;"><div style="height:100%; width:' + c.barW + '; background:var(--plum); border-radius:4px;"></div></div></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf; text-align:center;"><button data-action="delRow" data-arr="customers" data-idx="' + c.idx + '" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:16px; opacity:.6;">×</button></td></tr>';
+    var customers = V.custRows.map(function (c) {
+      var ships = c.ships.map(function (sh) {
+        return '<div style="display:flex; gap:8px; align-items:center; margin-bottom:5px;">' +
+          '<span style="font-size:10.5px; color:var(--muted);">货值</span>' +
+          '<input class="fld" inputmode="numeric" ' + bArr('arShipments', sh.si, 'value') + ' value="' + escA(sh.value) + '" placeholder="0" style="width:118px; text-align:right; ' + FLD + '">' +
+          '<span style="font-size:10.5px; color:var(--muted);">出货日期</span>' +
+          '<input class="fld" type="date" ' + bArr('arShipments', sh.si, 'date') + ' value="' + escA(sh.date) + '" style="width:148px; ' + FLD + '">' +
+          '<button data-action="delRow" data-arr="arShipments" data-idx="' + sh.si + '" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:14px; opacity:.6;">×</button>' +
+        '</div>';
+      }).join('');
+      return '<div style="border:1px solid var(--line); border-radius:12px; padding:13px 15px; margin-bottom:12px; background:#fff;">' +
+        '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">' +
+          '<input class="fld txt" ' + bArr('customers', c.idx, 'name') + ' value="' + escA(c.name) + '" style="flex:1; min-width:140px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 9px; font-size:13px; font-weight:600;">' +
+          '<select class="fld txt" ' + bArr('customers', c.idx, 'cat') + ' style="width:82px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 4px; font-size:11.5px; font-weight:600; color:' + c.catColor + ';">' + catOpt(c.cat) + '</select>' +
+          '<input class="fld txt" ' + bArr('customers', c.idx, 'note') + ' value="' + escA(c.note) + '" placeholder="备注" style="width:130px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 9px; font-size:12px;">' +
+          '<span style="font-size:11px; color:var(--muted);">应收余额 <b class="num" style="font-size:14px; color:var(--plum2);">' + esc(c.outstandingStr) + '</b></span>' +
+          '<button data-action="delRow" data-arr="customers" data-idx="' + c.idx + '" style="margin-left:auto; background:none; border:none; color:var(--rose); cursor:pointer; font-size:16px; opacity:.6;">×</button>' +
+        '</div>' +
+        '<div style="display:grid; grid-template-columns:1.15fr 1fr; gap:14px; align-items:start;">' +
+          '<div><div style="font-size:11px; color:var(--muted); margin-bottom:5px;">出货记录（货值 + 出货日期，汇总为应收余额）</div>' + ships +
+            '<button data-action="addArShip" data-cust="' + escA(c.id) + '" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:7px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer;">+ 添加出货</button></div>' +
+          '<div><div style="font-size:11px; color:var(--muted); margin-bottom:3px;">回款周（此客户全部应收在该周回款 · 金色＝本周 · 悬停看 +x周）</div>' + weekPicker('customers', c.idx, 'collectWeek', c.collectWeek, V) + '</div>' +
+        '</div>' +
+      '</div>';
     }).join('');
 
     return '<div>' +
-      card('<div style="font-size:13px; font-weight:700; color:var(--plum2); margin-bottom:10px;">选择周次 · 每位客户的本周预计回款</div>' + chips(V.allWeeks), ' margin-bottom:16px;') +
       '<div style="display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:14px; margin-bottom:16px;">' +
         '<div style="background:#c0613f; color:#fff; border-radius:15px; padding:18px 20px;"><div style="font-size:13px; color:#ecc6ab;">应收账款合计</div><div class="num" style="font-size:27px; font-weight:600; margin-top:6px;">' + esc(V.arOutWan) + '</div></div>' +
-        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);"><div style="font-size:13px; color:var(--muted);">本周预计回款 · ' + esc(V.selWeekLabel) + '</div><div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--leaf);">' + esc(V.arColWan) + '</div></div>' +
+        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);"><div style="font-size:13px; color:var(--muted);">本周预计回款（自动）</div><div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--leaf);">' + esc(V.arWeekCollectWan) + '</div></div>' +
         '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);"><div style="font-size:13px; color:var(--muted);">客户数</div><div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--plum2);">' + V.arCount + ' <span style="font-size:13px; color:var(--muted);">位</span></div></div>' +
       '</div>' +
       '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;">' + cats + '</div>' +
-      card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;"><div>' + h2('客户应收账款') + '<div style="font-size:12px; color:var(--muted);">' + esc(V.selWeekLabel) + ' · 应收余额与本周预计回款（元）</div></div>' +
+      card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;"><div>' + h2('客户应收账款') + '<div style="font-size:12px; color:var(--muted);">每位客户：出货记录（货值+日期）汇总为应收余额 · 选择回款周 → 自动计入该周「国内/国外收款」及上方汇总</div></div>' +
         '<button data-action="addRow" data-arr="customers" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer;">+ 新增客户</button></div>' +
-        '<table style="width:100%; border-collapse:collapse; font-size:12.5px; table-layout:fixed;"><thead><tr style="color:var(--muted); font-size:11px;">' +
-          '<th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:150px;">客户名称</th><th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:82px;">分类</th><th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:84px;">备注</th><th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:110px;">应收余额（元）</th><th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:116px;">本周预计回款</th><th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">应收占比</th><th style="width:30px; border-bottom:1px solid var(--line);"></th>' +
-        '</tr></thead><tbody>' + rows + '</tbody></table>' +
-        '<div style="font-size:11.5px; color:var(--muted); margin-top:12px;">提示：「本周预计回款」按所选周次记录，会自动叠加进预测页该周的「国内收款」；切换上方周次可分别录入每周的预计回款。</div>') +
+        (customers || '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">暂无客户 · 点击「+ 新增客户」</div>')) +
     '</div>';
   }
 
@@ -818,7 +842,7 @@
     return '<div>' +
       '<div class="no-print" style="display:flex; justify-content:flex-end; margin-bottom:14px;"><button data-action="print" style="background:var(--plum); color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer;">打印 / 导出 PDF</button></div>' +
       '<div class="print-area" style="background:#fff; border-radius:16px; padding:42px 48px; box-shadow:0 14px 40px -24px rgba(60,42,28,.45); border:1px solid var(--line); max-width:920px; margin:0 auto;">' +
-        '<div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid var(--plum); padding-bottom:18px; margin-bottom:24px;"><div><div class="serif" style="font-size:23px; font-weight:900; color:var(--plum2); white-space:nowrap;">' + esc(V.repCompany) + ' · 财务预测报告</div><div style="font-size:13px; color:var(--muted); margin-top:6px;">农历财年 ' + esc(V.repFy) + '</div></div><div class="serif" style="width:46px; height:46px; border-radius:13px; background:#6e8348; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:22px;">兰</div></div>' +
+        '<div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid var(--plum); padding-bottom:18px; margin-bottom:24px;"><div><div class="serif" style="font-size:23px; font-weight:900; color:var(--plum2); white-space:nowrap;">' + esc(V.repCompany) + ' · 财务预测报告</div><div style="font-size:13px; color:var(--muted); margin-top:6px;">农历财年 ' + esc(V.repFy) + '</div></div>' + logoBox(46, 13) + '</div>' +
         '<div class="serif" style="font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">关键指标</div>' +
         '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px;">' + kpis + '</div>' +
         '<div class="serif" style="font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">情况说明</div>' +
@@ -953,6 +977,7 @@
       case 'pickWeek': store.editArr(btn.dataset.arr, +btn.dataset.idx, btn.dataset.key, +btn.dataset.week); break;
       case 'scrollChips': { var sc = document.getElementById('weekChipScroll'); if (sc && sc.scrollBy) sc.scrollBy({ left: (+btn.dataset.dir) * Math.max(sc.clientWidth * 0.8, 200), behavior: 'smooth' }); break; }
       case 'addRow': store.addRow(btn.dataset.arr); break;
+      case 'addArShip': store.addRow('arShipments', { custId: btn.dataset.cust }); break;
       case 'delRow': store.delRow(btn.dataset.arr, +btn.dataset.idx); break;
       case 'addAssume': store.addAssumeItem(btn.dataset.group); break;
       case 'delCustom': store.delCustom(btn.dataset.id); break;
@@ -1006,7 +1031,7 @@
       '<div class="bg-cross" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">' +
         '<div style="width:100%; max-width:380px;">' +
           '<div style="display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:22px;">' +
-            '<div class="serif" style="width:54px; height:54px; border-radius:15px; background:#6e8348; color:#f4f1e6; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:27px; box-shadow:0 12px 30px -14px rgba(60,42,28,.6);">兰</div>' +
+            logoBox(54, 15) +
             '<div style="text-align:center;"><div style="font-weight:700; font-size:15px; letter-spacing:.2px;">昆明统一生物科技有限公司</div>' +
               '<div style="font-size:10.5px; color:var(--muted); letter-spacing:1.6px;">财务分析系统 · v1.0</div></div>' +
           '</div>' +
@@ -1028,6 +1053,13 @@
     if (!s || typeof s !== 'object') return d;
     var merged = Object.assign({}, d, s);
     merged.config = Object.assign({}, d.config, s.config || {}); // guard new config keys
+    // migration guards (older saved states): ensure customer ids + new arrays
+    merged.customers = (merged.customers || []).map(function (c) {
+      return c && c.id ? c : Object.assign({ id: 'c_' + Math.random().toString(36).slice(2, 8) }, c);
+    });
+    if (!Array.isArray(merged.arShipments)) merged.arShipments = [];
+    if (!Array.isArray(merged.shipments)) merged.shipments = d.shipments;
+    if (!Array.isArray(merged.payables)) merged.payables = [];
     return merged;
   }
 

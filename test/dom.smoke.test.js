@@ -69,14 +69,11 @@ obal.value = '9000000'; fire(obal, 'input');
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'dash'));
 ok(app.innerHTML.includes('900.00万'), 'opening balance edit reflows into 现可用款 KPI (900.00万)');
 
-// 6) AR weekly collection wires into the forecast 国内收款 breakdown
+// 6) AR redesign: per-customer shipments + 回款周 picker; forecast keeps the AR line
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'ar'));
-const collectInput = [...app.querySelectorAll('input[data-map="collect"]')][0];
-ok(collectInput, 'found an AR 本周预计回款 input');
-collectInput.value = '12345'; fire(collectInput, 'input');
+ok(app.innerHTML.includes('回款周') && app.querySelector('[data-action="addArShip"]'), 'AR page: per-customer 出货 + 回款周 picker');
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'fcst'));
-ok(app.innerHTML.includes('本周应收账款回款'), 'forecast 收款测算 shows the AR line');
-ok(app.innerHTML.includes('1.23万'), 'AR collection (12345 → 1.23万) appears in the domestic breakdown');
+ok(app.innerHTML.includes('本周应收账款回款'), 'forecast 收款测算 shows the AR collection line');
 
 // 7) selecting a week chip changes the active selection
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'fcst'));

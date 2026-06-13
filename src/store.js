@@ -69,12 +69,12 @@
         { name: '软件/专利年费', amount: '', months: '3,7,11' }
       ],
       customers: [
-        { name: '斗南门市批发', outstanding: '', note: '', cat: '省内' },
-        { name: '小街基地走量客户', outstanding: '', note: '', cat: '省内' },
-        { name: '俄罗斯出口客户', outstanding: '', note: '', cat: '国外' },
-        { name: '广东全美（转售）', outstanding: '', note: '', cat: '省外' },
-        { name: '染色花经销商', outstanding: '', note: '', cat: '省内' },
-        { name: '切花批发商', outstanding: '', note: '', cat: '国内' }
+        { id: 'c1', name: '斗南门市批发', cat: '省内', note: '', collectWeek: '' },
+        { id: 'c2', name: '小街基地走量客户', cat: '省内', note: '', collectWeek: '' },
+        { id: 'c3', name: '俄罗斯出口客户', cat: '国外', note: '', collectWeek: '' },
+        { id: 'c4', name: '广东全美（转售）', cat: '省外', note: '', collectWeek: '' },
+        { id: 'c5', name: '染色花经销商', cat: '省内', note: '', collectWeek: '' },
+        { id: 'c6', name: '切花批发商', cat: '国内', note: '', collectWeek: '' }
       ],
       assumeWeek: {}, customItems: [],
       shipments: [
@@ -83,8 +83,8 @@
         { id: 'sh_c', type: '苗', channel: '国内', supplier: '漳州新百盛', spec: '2.8寸成熟苗', qty: '', amount: '', iq: '', freight: '', freightWeek: '' },
         { id: 'sh_d', type: '花', channel: '国内', supplier: '佛山润喆卉', spec: '3.5寸开花株', qty: '', amount: '', iq: '', freight: '', freightWeek: '' }
       ],
-      payables: [],
-      sales: {}, fcst: {}, actual: {}, collect: {}
+      payables: [], arShipments: [],
+      sales: {}, fcst: {}, actual: {}
     };
   }
 
@@ -172,13 +172,15 @@
     this.state[arr] = a; this._notify();
   };
 
-  Store.prototype.addRow = function (arr) {
+  Store.prototype.addRow = function (arr, seed) {
     var tmpl;
-    if (arr === 'customers') tmpl = { name: '新客户', outstanding: '', note: '', cat: '国内' };
+    if (arr === 'customers') tmpl = { id: 'c_' + Math.random().toString(36).slice(2, 8), name: '新客户', cat: '国内', note: '', collectWeek: '' };
     else if (arr === 'shipments') tmpl = { id: 'sh_' + Math.random().toString(36).slice(2, 8), type: '苗', channel: '国内', supplier: '新供应商', spec: '', qty: '', amount: '', iq: '', freight: '', freightWeek: '' };
     else if (arr === 'payables') tmpl = { id: 'p_' + Math.random().toString(36).slice(2, 8), shipmentId: '', payWeek: '', amount: '', urgency: '三级' };
+    else if (arr === 'arShipments') tmpl = { id: 'as_' + Math.random().toString(36).slice(2, 8), custId: '', value: '', date: '' };
     else tmpl = { name: '新条目', amount: '', months: '' };
-    this.state[arr] = this.state[arr].concat([tmpl]); this._notify();
+    if (seed) { for (var k in seed) tmpl[k] = seed[k]; }
+    this.state[arr] = (this.state[arr] || []).concat([tmpl]); this._notify();
   };
   Store.prototype.delRow = function (arr, idx) {
     this.state[arr] = this.state[arr].filter(function (_, k) { return k !== idx; }); this._notify();

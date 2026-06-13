@@ -158,14 +158,21 @@ ok(E.fcOf(S(), FW, 'foreign') === 777777, 'forecast override applied');
 setMap('fcst', /:foreign$/, '');   // re-query: previous edit re-rendered the node
 ok(approx(E.fcOf(S(), FW, 'foreign'), E.computed(S(), FW).foreign), 'blank override falls back to the assumption value');
 
-// ---------- 7. RECEIVABLES outstanding + category ----------
+// ---------- 7. RECEIVABLES: per-customer 出货 + 回款周 → forecast 收款 by channel ----------
 nav('ar');
-const out0 = S().customers.reduce((s, c) => s + (parseFloat(c.outstanding) || 0), 0);
-setV(byArr('customers', 0, 'outstanding'), '1000000');
-const out1 = S().customers.reduce((s, c) => s + (parseFloat(c.outstanding) || 0), 0);
-ok(out1 !== out0 && S().customers[0].outstanding === '1000000', '应收余额 edit updates the customer + total');
-setV(byArr('customers', 0, 'cat'), '国外', 'change');
-ok(S().customers[0].cat === '国外', '客户分类 select persists (feeds category summary)');
+const cIdx = 5;                                   // 切花批发商 (国内), no demo shipment
+const arCustId = S().customers[cIdx].id;
+const beforeDom = E.arDueInWeek(S(), W).domestic;
+click(app.querySelector('[data-action="addArShip"][data-cust="' + arCustId + '"]'));
+const asIdx = S().arShipments.length - 1;
+setV(byArr('arShipments', asIdx, 'value'), '500000');
+ok(approx(E.customerOutstanding(S(), arCustId), 500000, 1), '客户出货货值汇总为应收余额 (500000)');
+click(app.querySelector('[data-action="pickWeek"][data-arr="customers"][data-idx="' + cIdx + '"][data-week="' + W + '"]'));
+ok(S().customers[cIdx].collectWeek === W, '回款周 tile click sets collectWeek = ' + W);
+ok(approx(E.arDueInWeek(S(), W).domestic - beforeDom, 500000, 1), '客户应收在回款周计入 国内收款 (+500000)');
+const domBeforeCat = E.arDueInWeek(S(), W).domestic;
+setV(byArr('customers', cIdx, 'cat'), '国外', 'change');
+ok(approx(domBeforeCat - E.arDueInWeek(S(), W).domestic, 500000, 1), '客户分类→国外 时应收从 国内 转入 国外收款');
 
 // ---------- 8. CONFIG: dates regenerate weeks; as-of splits; unit toggles ----------
 const obal = window.document.getElementById('c|openingBalance');

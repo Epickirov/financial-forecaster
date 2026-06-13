@@ -201,14 +201,21 @@
     return { foreign: foreign, domestic: domestic };
   }
 
-  // 应收账款: per-week expected collection recorded against customers (custIdx:weekIdx).
-  // This is an explicit, opt-in SOURCE of the forecast's 国内收款 (it represents
-  // collecting OLD outstanding receivables, distinct from new-sales collection).
-  function arCollectInWeek(state, wIdx) {
-    var collect = state.collect || {};
-    return (state.customers || []).reduce(function (s, c, i) {
-      return s + num(collect[i + ':' + wIdx]);
-    }, 0);
+  // 应收账款: each customer's receivable shipments sum to their outstanding,
+  // collected in the customer's chosen collection week. 国外 customers feed
+  // 国外收款; everyone else feeds 国内收款.
+  function customerOutstanding(state, custId) {
+    return (state.arShipments || []).reduce(function (s, sh) { return sh.custId === custId ? s + num(sh.value) : s; }, 0);
+  }
+  function arDueInWeek(state, wIdx) {
+    var foreign = 0, domestic = 0;
+    (state.customers || []).forEach(function (c) {
+      var w = parseInt(c.collectWeek, 10);
+      if (isNaN(w) || w !== wIdx) return;
+      var amt = customerOutstanding(state, c.id);
+      if (c.cat === '国外') foreign += amt; else domestic += amt;
+    });
+    return { foreign: foreign, domestic: domestic };
   }
 
   // ---------- the assumption-driven forecast for ONE week ------------------
@@ -230,10 +237,11 @@
                      qDye * g('priceDye') + qCut * g('priceCut');
     var collectRate = g('collectInMonth') + g('collectPrior');
 
-    var foreign = foreignMonthly / WPM;
+    var arDue = arDueInWeek(state, wIdx);                   // 应收账款 collected this week (国外 / 国内)
+    var foreign = foreignMonthly / WPM + arDue.foreign;
     var domSales = domMonthly / WPM * collectRate;          // collection from NEW sales
-    var arCollect = arCollectInWeek(state, wIdx);           // collection of OLD receivables
-    var domestic = domSales + arCollect;                    // <-- 应收账款 now feeds 国内收款
+    var arCollect = arDue.domestic;                         // 应收账款 → 国内收款
+    var domestic = domSales + arCollect;
 
     // 苗款 / 开花株款: scheduled payables due this week (from the register), else assumption baseline
     var dueMiao = dueInWeek(state, wIdx, '苗'), dueHua = dueInWeek(state, wIdx, '花');
@@ -258,7 +266,7 @@
       payroll: payroll, utilrent: utilrent, projects: projects, materials: materials,
       travel: travel, loan: loan, custom: custom,
       // breakdown helpers (not part of the cash spine, used by 收款测算)
-      _domSales: domSales, _arCollect: arCollect, _domMonthly: domMonthly, _collectRate: collectRate, _keep: keep
+      _domSales: domSales, _arCollect: arCollect, _arForeign: arDue.foreign, _domMonthly: domMonthly, _collectRate: collectRate, _keep: keep
     };
   }
 
@@ -365,7 +373,7 @@
     shipmentById: shipmentById, shipUnit: shipUnit, payableMeta: payableMeta, payableAmt: payableAmt,
     payWeekOf: payWeekOf, dueInWeek: dueInWeek, freightDueInWeek: freightDueInWeek,
     lastWeekOfMonth: lastWeekOfMonth, payableBuckets: payableBuckets, salesReceipts: salesReceipts,
-    arCollectInWeek: arCollectInWeek,
+    customerOutstanding: customerOutstanding, arDueInWeek: arDueInWeek,
     computed: computed, isHist: isHist, fcOf: fcOf, acOf: acOf, eff: eff, payOf: payOf, fcPayOf: fcPayOf,
     series: series, forecastCloses: forecastCloses,
     fmt: fmt, wan: wan, yuan0: yuan0, donut: donut

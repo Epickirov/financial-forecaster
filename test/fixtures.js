@@ -64,12 +64,12 @@ function demoModel() {
       { name: '软件/专利年费', amount: '11300', months: '3,7,11' }
     ],
     customers: [
-      { name: '斗南门市批发', outstanding: '186000', note: '每周结算', cat: '省内' },
-      { name: '小街基地走量客户', outstanding: '240000', note: '', cat: '省内' },
-      { name: '俄罗斯出口客户', outstanding: '515000', note: '已到账未结汇', cat: '国外' },
-      { name: '广东全美（转售）', outstanding: '78000', note: '', cat: '省外' },
-      { name: '染色花经销商', outstanding: '44000', note: '', cat: '省内' },
-      { name: '切花批发商', outstanding: '33000', note: '', cat: '国内' }
+      { id: 'c1', name: '斗南门市批发', cat: '省内', note: '每周结算', collectWeek: '' + (wTarget + 2) },
+      { id: 'c2', name: '小街基地走量客户', cat: '省内', note: '', collectWeek: '' },
+      { id: 'c3', name: '俄罗斯出口客户', cat: '国外', note: '已到账未结汇', collectWeek: '' + (wTarget + 2) },
+      { id: 'c4', name: '广东全美（转售）', cat: '省外', note: '', collectWeek: '' },
+      { id: 'c5', name: '染色花经销商', cat: '省内', note: '', collectWeek: '' },
+      { id: 'c6', name: '切花批发商', cat: '国内', note: '', collectWeek: '' }
     ],
     assumeWeek: {}, customItems: [],
     // 进货验货 — per-supplier shipments (单价 = 金额/数量 auto)
@@ -84,7 +84,12 @@ function demoModel() {
       { id: 'pa2', shipmentId: 'sh2', payWeek: Wn, amount: '', urgency: '二级' },
       { id: 'pa3', shipmentId: 'sh3', payWeek: W, amount: '', urgency: '四级' }
     ],
-    sales: sales, fcst: {}, actual: actualSeed, collect: {}
+    arShipments: [
+      { id: 'ar1', custId: 'c1', value: '186000', date: '2026-05-20' },
+      { id: 'ar2', custId: 'c3', value: '515000', date: '2026-05-18' },
+      { id: 'ar3', custId: 'c2', value: '240000', date: '2026-05-25' }
+    ],
+    sales: sales, fcst: {}, actual: actualSeed
   };
 }
 

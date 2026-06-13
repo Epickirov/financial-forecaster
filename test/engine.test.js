@@ -20,11 +20,12 @@ test('shipped defaultModel keeps names/specs but clears all financial figures', 
   var d = FFStore.defaultModel();
   assert.strictEqual(d.config.openingBalance, '', 'opening balance cleared');
   Object.keys(d.assume).forEach(function (k) { assert.strictEqual(d.assume[k], '', 'assume.' + k + ' cleared'); });
-  ['sales', 'fcst', 'actual', 'collect'].forEach(function (m) { assert.deepStrictEqual(d[m], {}, m + ' empty'); });
+  ['sales', 'fcst', 'actual'].forEach(function (m) { assert.deepStrictEqual(d[m], {}, m + ' empty'); });
   assert.deepStrictEqual(d.payables, [], 'payables empty');
+  assert.deepStrictEqual(d.arShipments, [], 'arShipments empty');
   d.rents.forEach(function (r) { assert.ok(r.name, 'rent name kept'); assert.strictEqual(r.amount, '', 'rent amount cleared'); });
   d.fixed.forEach(function (r) { assert.ok(r.name, 'fixed name kept'); assert.strictEqual(r.amount, '', 'fixed amount cleared'); });
-  d.customers.forEach(function (c) { assert.ok(c.name, 'customer name kept'); assert.strictEqual(c.outstanding, '', 'customer balance cleared'); });
+  d.customers.forEach(function (c) { assert.ok(c.id && c.name, 'customer id + name kept'); assert.strictEqual(c.collectWeek, '', 'collectWeek cleared'); });
   d.shipments.forEach(function (sh) { assert.ok(sh.supplier && sh.spec, 'shipment supplier+spec kept'); assert.strictEqual(sh.qty, '', 'shipment qty cleared'); assert.strictEqual(sh.amount, '', 'shipment amount cleared'); assert.strictEqual(sh.iq, '', 'shipment IQ cleared'); });
 });
 
@@ -59,18 +60,23 @@ test('computed splits foreign/domestic from named drivers', function () {
   approx(c.foreign, expF, 1e-3);
 });
 
-// ---- 应收账款 now feeds 国内收款 (the wiring fix) ------------------------
-test('arCollectInWeek feeds computed.domestic additively', function () {
+// ---- 应收账款: shipments → outstanding, collected in a per-customer week ---
+test('应收账款 collection feeds computed by channel (国外→foreign, 其余→domestic)', function () {
   var s = fresh();
-  var before = E.computed(s, 12);
-  s.collect['0:12'] = '50000';
-  s.collect['2:12'] = '30000';
-  var after = E.computed(s, 12);
-  approx(E.arCollectInWeek(s, 12), 80000);
-  approx(after.domestic - before.domestic, 80000, 1e-6);
-  approx(after._arCollect, 80000);
-  approx(after._domSales, before._domSales);            // sales part unchanged
-  approx(after.domestic, after._domSales + after._arCollect);
+  var wT = E.weeks(s).findIndex(function (w) { return '2026-05-26' >= w.startISO && '2026-05-26' <= w.endISO; });
+  var cw = wT + 2;                          // demo: c1(省内 186000) + c3(国外 515000) collect here
+  approx(E.customerOutstanding(s, 'c1'), 186000);   // outstanding = sum of that customer's AR shipments
+  var due = E.arDueInWeek(s, cw);
+  approx(due.domestic, 186000);
+  approx(due.foreign, 515000);
+  var c = E.computed(s, cw);
+  approx(c._arCollect, 186000);             // 省内/国内 AR → 国内收款
+  approx(c._arForeign, 515000);             // 国外 AR → 国外收款
+  approx(c.domestic, c._domSales + c._arCollect);
+  // moving a customer's collection week shifts the collection
+  s.customers[0].collectWeek = '' + (cw + 1);
+  approx(E.arDueInWeek(s, cw).domestic, 0);
+  approx(E.arDueInWeek(s, cw + 1).domestic, 186000);
 });
 
 // ---- 苗/花应付款 register drives 苗款/开花株款 timing; freight → materials --
