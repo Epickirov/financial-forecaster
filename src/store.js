@@ -93,30 +93,34 @@
     try { localStorage.removeItem(this.key); } catch (e) {}
   };
 
-  /* Backend adapter skeleton — wire this up when the Cloudflare Worker is
-     ready (see README "后端路线图"). Kept here so the swap is one line.
-     NOTE: load() is async; app.js boots from cache first then reconciles.
-
-     function RemoteAdapter(baseUrl, token) { this.base = baseUrl; this.token = token; }
-     RemoteAdapter.prototype.load = function () {
-       return fetch(this.base + '/state', { headers: { Authorization: 'Bearer ' + this.token } })
-         .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
-     };
-     RemoteAdapter.prototype.save = function (state) {
-       return fetch(this.base + '/state', {
-         method: 'PUT',
-         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + this.token },
-         body: JSON.stringify(state)
-       }).catch(function () {});
-     };
-  */
+  // Backend adapter: persists each authenticated user's workspace to the
+  // Cloudflare Pages Function at /api/state (D1-backed). The session cookie is
+  // sent automatically (same-origin). load() is a no-op here — app.js
+  // prefetches the state right after authentication and hands it to the Store
+  // constructor, so boot stays simple. Saves are fire-and-forget (debounced by
+  // the store) and silently skipped when fetch is unavailable (e.g. tests).
+  function RemoteAdapter() {}
+  RemoteAdapter.prototype.load = function () { return null; };
+  RemoteAdapter.prototype.save = function (state) {
+    if (typeof fetch !== 'function') return;
+    try {
+      fetch('/api/state', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ state: state })
+      }).catch(function () {});
+    } catch (e) {}
+  };
 
   // ---------- the store ----------------------------------------------------
-  function Store(adapter) {
+  function Store(adapter, initialState) {
     this.adapter = adapter || new LocalStorageAdapter();
     this.subs = [];
     this._saveTimer = null;
-    this.state = this._loadInitial();
+    // When the caller already holds the state (e.g. fetched from the backend
+    // after login), use it directly; otherwise load through the adapter.
+    this.state = initialState != null ? initialState : this._loadInitial();
   }
 
   Store.prototype._loadInitial = function () {
@@ -194,7 +198,7 @@
     this.state = defaultModel(); this._notify();
   };
 
-  var api = { Store: Store, LocalStorageAdapter: LocalStorageAdapter, defaultModel: defaultModel, STORAGE_KEY: STORAGE_KEY };
+  var api = { Store: Store, LocalStorageAdapter: LocalStorageAdapter, RemoteAdapter: RemoteAdapter, defaultModel: defaultModel, STORAGE_KEY: STORAGE_KEY };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else global.FFStore = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -7,8 +7,12 @@
     "test": "node test/engine.test.js",
     "test:dom": "node test/dom.smoke.test.js && node test/dom.wiring.test.js",
     "test:all": "npm test && npm run test:dom",
+    "build": "rm -rf dist && mkdir -p dist/src && cp index.html styles.css dist/ && cp src/engine.js src/store.js src/app.js dist/src/",
+    "dev": "npm run build && npx wrangler pages dev dist",
     "start": "python3 -m http.server 8080",
-    "serve": "python3 -m http.server 8080"
+    "serve": "python3 -m http.server 8080",
+    "db:schema:local": "npx wrangler d1 execute kmty-forecaster-db --local --file=db/schema.sql",
+    "db:schema:remote": "npx wrangler d1 execute kmty-forecaster-db --remote --file=db/schema.sql"
   },
   "license": "UNLICENSED",
   "devDependencies": {

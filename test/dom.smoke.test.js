@@ -20,12 +20,11 @@ window.eval(read('src/app.js'));   // registers boot on DOMContentLoaded
 // jsdom leaves readyState='loading'; fire the event to trigger boot (real browsers do this).
 if (window.document.readyState === 'loading') window.document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true }));
 
-// The shipped app boots a BLANK template (financial data lives only in the
-// browser as the user types). The regression suite drives the rich demo
-// fixture, so inject it into the live store and re-render.
+// The shipped app is auth-gated and boots a BLANK template. With no backend
+// in jsdom it shows the login screen; the regression suite bypasses the gate
+// via the FFApp.enterWithState seam, mounting the app with the rich demo data.
 const demoModel = require('./fixtures.js');
-window.FFApp.store.state = demoModel();
-window.FFApp.rerender();
+window.FFApp.enterWithState(demoModel());
 
 const $ = sel => window.document.querySelector(sel);
 const app = $('#app');

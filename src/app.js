@@ -336,7 +336,11 @@
           '</div>' +
         '</div>' +
         '<nav style="display:flex; align-items:center; justify-content:center; gap:2px; flex:1; margin:0 8px; flex-wrap:nowrap; overflow-x:auto;">' + nav + '</nav>' +
-        '<button data-action="reset" style="flex:none; background:#fbf6ee; border:1px solid var(--line); color:var(--muted); font-size:11.5px; padding:7px 12px; border-radius:8px; cursor:pointer;">重置数据</button>' +
+        '<div style="display:flex; align-items:center; gap:8px; flex:none;">' +
+          (currentUser && currentUser.email ? '<span title="' + escA(currentUser.email) + '" style="font-size:11px; color:var(--muted); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(currentUser.email) + '</span>' : '') +
+          '<button data-action="reset" style="background:#fbf6ee; border:1px solid var(--line); color:var(--muted); font-size:11.5px; padding:7px 12px; border-radius:8px; cursor:pointer;">重置数据</button>' +
+          '<button data-action="logout" style="background:#fff; border:1px solid var(--field-bd); color:var(--plum2); font-size:11.5px; padding:7px 12px; border-radius:8px; cursor:pointer;">退出</button>' +
+        '</div>' +
       '</header>' +
       '<header class="no-print bg-cloth" style="border-bottom:1px solid #564327; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); padding:13px 28px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;">' +
         '<div style="flex:none;">' +
@@ -704,6 +708,11 @@
   //  MOUNT + EVENTS
   // ===================================================================
   var store, root;
+  var currentUser = null;          // {id,email} once authenticated, else null
+  var authTab = 'login';           // 'login' | 'signup'
+  var authError = '';
+  var authBusy = false;
+  var authEmailVal = '';           // preserve the typed email across auth re-renders
 
   function captureFocus() {
     var el = document.activeElement;
@@ -801,24 +810,168 @@
       case 'addAssume': store.addAssumeItem(btn.dataset.group); break;
       case 'delCustom': store.delCustom(btn.dataset.id); break;
       case 'print': window.print(); break;
+      case 'logout': doLogout(); break;
+      case 'authToggle': e.preventDefault(); authTab = (authTab === 'signup' ? 'login' : 'signup'); authError = ''; renderAuth(); break;
     }
+  }
+
+  function doLogout() {
+    var done = function () {
+      store = null; currentUser = null; authTab = 'login'; authError = ''; authEmailVal = '';
+      if (window.FFApp) { window.FFApp.store = null; window.FFApp.user = null; }
+      renderAuth();
+    };
+    if (typeof fetch !== 'function') { done(); return; }
+    fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }).then(done, done);
+  }
+
+  // ===================================================================
+  //  AUTH SCREEN  (login / signup — same visual system as the app)
+  // ===================================================================
+  var AUTH_FLD = 'width:100%; box-sizing:border-box; border:1px solid var(--field-bd); background:var(--field); border-radius:9px; padding:11px 12px; font-size:14px; color:var(--ink);';
+
+  function renderAuth() {
+    var isSignup = authTab === 'signup';
+    var title = isSignup ? '注册账户' : '登录';
+    var sub = isSignup ? '创建账户以保存并同步您的财务预测数据' : '登录以访问您的财务预测工作区';
+    var inner =
+      '<div class="serif" style="font-size:20px; font-weight:700; margin-bottom:4px;">' + title + '</div>' +
+      '<div style="font-size:12px; color:var(--muted); margin-bottom:18px;">' + sub + '</div>' +
+      '<form id="authForm" novalidate>' +
+        '<label style="display:block; margin-bottom:13px;"><span style="display:block; font-size:12px; color:var(--muted); margin-bottom:5px;">邮箱</span>' +
+          '<input class="fld txt" id="authEmail" type="email" value="' + escA(authEmailVal) + '" autocomplete="username" style="' + AUTH_FLD + '"></label>' +
+        '<label style="display:block; margin-bottom:' + (isSignup ? '13px' : '4px') + ';"><span style="display:block; font-size:12px; color:var(--muted); margin-bottom:5px;">密码</span>' +
+          '<input class="fld txt" id="authPassword" type="password" autocomplete="' + (isSignup ? 'new-password' : 'current-password') + '" style="' + AUTH_FLD + '"></label>' +
+        (isSignup ? ('<label style="display:block; margin-bottom:4px;"><span style="display:block; font-size:12px; color:var(--muted); margin-bottom:5px;">确认密码</span>' +
+          '<input class="fld txt" id="authPassword2" type="password" autocomplete="new-password" style="' + AUTH_FLD + '"></label>') : '') +
+        (authError ? '<div style="margin:12px 0 2px; font-size:12.5px; color:var(--rose); background:#fbeae6; border:1px solid #f0cfc6; border-radius:8px; padding:8px 11px;">' + esc(authError) + '</div>' : '') +
+        '<button type="submit"' + (authBusy ? ' disabled' : '') + ' style="width:100%; margin-top:16px; background:' + (authBusy ? '#9aa888' : 'var(--leaf)') + '; color:#fff; border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:700; cursor:' + (authBusy ? 'default' : 'pointer') + ';">' + (authBusy ? '请稍候…' : title) + '</button>' +
+      '</form>' +
+      '<div style="text-align:center; margin-top:15px; font-size:12.5px; color:var(--muted);">' +
+        (isSignup ? '已有账户？' : '还没有账户？') +
+        ' <a href="#" data-action="authToggle" style="color:var(--plum); font-weight:600; text-decoration:none;">' + (isSignup ? '去登录' : '注册新账户') + '</a></div>';
+
+    root.innerHTML =
+      '<div class="bg-cross" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">' +
+        '<div style="width:100%; max-width:380px;">' +
+          '<div style="display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:22px;">' +
+            '<div class="serif" style="width:54px; height:54px; border-radius:15px; background:#6e8348; color:#f4f1e6; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:27px; box-shadow:0 12px 30px -14px rgba(60,42,28,.6);">兰</div>' +
+            '<div style="text-align:center;"><div style="font-weight:700; font-size:15px; letter-spacing:.2px;">昆明统一生物科技有限公司</div>' +
+              '<div style="font-size:10.5px; color:var(--muted); letter-spacing:1.6px;">财务分析系统 · v1.0</div></div>' +
+          '</div>' +
+          card(inner, ' padding:26px 26px 22px;') +
+          '<div style="text-align:center; margin-top:16px; font-size:10.5px; color:var(--muted);">数据按账户隔离存储 · 仅您本人可见</div>' +
+        '</div>' +
+      '</div>';
+    var f = document.getElementById('authEmail');
+    if (f && !f.value) { try { f.focus(); } catch (e) {} }
+  }
+
+  function renderLoading() {
+    root.innerHTML = '<div class="bg-cross" style="min-height:100vh; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:13px;">载入中…</div>';
+  }
+
+  // merge a (possibly partial / older-schema) state over a fresh blank model
+  function mergeDefault(s) {
+    var d = FFStore.defaultModel();
+    if (!s || typeof s !== 'object') return d;
+    var merged = Object.assign({}, d, s);
+    merged.config = Object.assign({}, d.config, s.config || {}); // guard new config keys
+    return merged;
+  }
+
+  function doAuth() {
+    if (authBusy) return;
+    var emailEl = document.getElementById('authEmail');
+    var pwEl = document.getElementById('authPassword');
+    var email = emailEl ? emailEl.value.trim() : '';
+    var pw = pwEl ? pwEl.value : '';
+    authEmailVal = email;
+    authError = '';
+    if (!email || !pw) { authError = '请输入邮箱和密码'; renderAuth(); return; }
+    if (authTab === 'signup') {
+      var pw2El = document.getElementById('authPassword2');
+      var pw2 = pw2El ? pw2El.value : '';
+      if (pw.length < 8) { authError = '密码至少需要 8 位'; renderAuth(); return; }
+      if (pw !== pw2) { authError = '两次输入的密码不一致'; renderAuth(); return; }
+    }
+    authBusy = true; renderAuth();
+    fetch('/api/' + (authTab === 'signup' ? 'signup' : 'login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+      body: JSON.stringify({ email: email, password: pw })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, data: data }; });
+    }).then(function (res) {
+      authBusy = false;
+      if (!res.ok) { authError = (res.data && res.data.error) || '操作失败，请重试'; renderAuth(); return; }
+      authError = ''; authEmailVal = '';
+      currentUser = res.data.user;
+      enterApp();
+    }).catch(function () {
+      authBusy = false; authError = '网络错误，请重试'; renderAuth();
+    });
+  }
+
+  function onAuthSubmit(e) {
+    var form = e.target && e.target.closest ? e.target.closest('#authForm') : null;
+    if (!form) return;
+    e.preventDefault();
+    doAuth();
+  }
+
+  // ===================================================================
+  //  BOOT  (auth-gated, async)
+  // ===================================================================
+  // Mount the app for an authenticated user. `prefetchedState` (when defined)
+  // short-circuits the /api/state fetch — used after login once we already
+  // have the state, and by the test harness to bypass the network gate.
+  function enterApp(prefetchedState) {
+    function mount(serverState) {
+      store = new FFStore.Store(new FFStore.RemoteAdapter(), mergeDefault(serverState));
+      store.subscribe(render);
+      render(store.state);
+      window.FFApp.store = store;
+      window.FFApp.user = currentUser;
+    }
+    if (prefetchedState !== undefined) { mount(prefetchedState); return; }
+    renderLoading();
+    fetch('/api/state', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : { state: null }; })
+      .then(function (d) { mount(d.state); })
+      .catch(function () { mount(null); });
+  }
+
+  function start() {
+    // No backend reachable (e.g. jsdom tests, file://) → show the gate; the
+    // test harness mounts the app directly via FFApp.enterWithState().
+    if (typeof fetch !== 'function') { renderAuth(); return; }
+    renderLoading();
+    fetch('/api/me', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : { user: null }; })
+      .then(function (d) {
+        if (d && d.user) { currentUser = d.user; enterApp(); }
+        else { authTab = 'login'; renderAuth(); }
+      })
+      .catch(function () { authTab = 'login'; renderAuth(); });
   }
 
   function boot() {
     root = document.getElementById('app');
-    // Persistence adapter: LocalStorage now. To move to the Cloudflare
-    // Worker later, build a RemoteAdapter (see store.js) and pass it here.
-    store = new FFStore.Store(new FFStore.LocalStorageAdapter());
-    store.subscribe(render);
     root.addEventListener('input', onEditEvent);
     root.addEventListener('change', onEditEvent);
     root.addEventListener('click', onClick);
-    render(store.state);
+    root.addEventListener('submit', onAuthSubmit);
 
-    // Intentional debug/integration handle: lets you inspect state and the
-    // derived view model from the console, and is the seam the future
-    // backend code can use. Pure read access to the live store.
-    window.FFApp = { store: store, engine: E, buildView: buildView, rerender: function () { render(store.state); } };
+    // Integration handle, established before the async auth boot so it always
+    // exists. `enterWithState` is the seam the test harness uses to mount the
+    // app with a known state without the network auth round-trip.
+    window.FFApp = {
+      store: null, engine: E, buildView: buildView, user: null,
+      rerender: function () { if (store) render(store.state); },
+      enterWithState: function (state) { enterApp(state); }
+    };
+
+    start();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

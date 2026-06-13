@@ -5,3 +5,10 @@
 name = "kmty-financial-forecaster"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-06-13"
+
+# Auth + per-user state. Pages Functions in ./functions reach this as env.DB.
+# database_id is not a secret; the API token stays in the cloud environment.
+[[d1_databases]]
+binding = "DB"
+database_name = "kmty-forecaster-db"
+database_id = "2b762490-c61b-4bb8-a784-3c616de24216"
