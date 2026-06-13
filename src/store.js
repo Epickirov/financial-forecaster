@@ -77,15 +77,14 @@
         { name: '切花批发商', outstanding: '', note: '', cat: '国内' }
       ],
       assumeWeek: {}, customItems: [],
-      seedPayables: [
-        { supplier: '山东绿航', spec: '2.8寸成熟苗', qty: '', price: '', payby: '', urgency: '三级', note: '' },
-        { supplier: '和鸣花卉', spec: '3.5寸成熟苗', qty: '', price: '', payby: '', urgency: '三级', note: '' },
-        { supplier: '漳州新百盛', spec: '2.8寸成熟苗', qty: '', price: '', payby: '', urgency: '三级', note: '' },
-        { supplier: '厦门品诚', spec: '2.8寸成熟苗', qty: '', price: '', payby: '', urgency: '三级', note: '' },
-        { supplier: '汇海生物', spec: '瓶苗', qty: '', price: '', payby: '', urgency: '三级', note: '' },
-        { supplier: '佛山润喆卉', spec: '3.5寸成熟苗', qty: '', price: '', payby: '', urgency: '三级', note: '' }
+      shipments: [
+        { id: 'sh_a', type: '苗', channel: '国内', supplier: '山东绿航', spec: '2.8寸成熟苗', qty: '', amount: '', iq: '', freight: '', freightWeek: '' },
+        { id: 'sh_b', type: '苗', channel: '国内', supplier: '和鸣花卉', spec: '3.5寸成熟苗', qty: '', amount: '', iq: '', freight: '', freightWeek: '' },
+        { id: 'sh_c', type: '苗', channel: '国内', supplier: '漳州新百盛', spec: '2.8寸成熟苗', qty: '', amount: '', iq: '', freight: '', freightWeek: '' },
+        { id: 'sh_d', type: '花', channel: '国内', supplier: '佛山润喆卉', spec: '3.5寸开花株', qty: '', amount: '', iq: '', freight: '', freightWeek: '' }
       ],
-      sales: {}, purch: {}, fcst: {}, actual: {}, collect: {}
+      payables: [],
+      sales: {}, fcst: {}, actual: {}, collect: {}
     };
   }
 
@@ -175,9 +174,10 @@
 
   Store.prototype.addRow = function (arr) {
     var tmpl;
-    if (arr === 'customers') tmpl = { name: '新客户', outstanding: '0', note: '', cat: '国内' };
-    else if (arr === 'seedPayables') tmpl = { supplier: '新供应商', spec: '', qty: '0', price: '0', payby: '', urgency: '三级', note: '' };
-    else tmpl = { name: '新条目', amount: '0', months: '' };
+    if (arr === 'customers') tmpl = { name: '新客户', outstanding: '', note: '', cat: '国内' };
+    else if (arr === 'shipments') tmpl = { id: 'sh_' + Math.random().toString(36).slice(2, 8), type: '苗', channel: '国内', supplier: '新供应商', spec: '', qty: '', amount: '', iq: '', freight: '', freightWeek: '' };
+    else if (arr === 'payables') tmpl = { id: 'p_' + Math.random().toString(36).slice(2, 8), shipmentId: '', payWeek: '', amount: '', urgency: '三级' };
+    else tmpl = { name: '新条目', amount: '', months: '' };
     this.state[arr] = this.state[arr].concat([tmpl]); this._notify();
   };
   Store.prototype.delRow = function (arr, idx) {

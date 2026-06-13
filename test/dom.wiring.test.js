@@ -39,12 +39,12 @@ const sel = () => Math.min(Math.max(S().weekIdx | 0, 0), E.weeks(S()).length - 1
 
 console.log('wiring.js — every field → its destination\n');
 
-// pick a clean FUTURE week with NO committed 苗款 payable due (so the seedling
-// BASELINE assumption is in effect, not a dated-payable override).
+// pick a clean FUTURE week with NO scheduled 苗 payable due (so the seedling
+// BASELINE assumption is in effect, not a payable override).
 nav('fcst');
-let W = E.weeks(S()).findIndex((w, i) => !E.isHist(S(), i) && E.seedDueInWeek(S(), i) === 0);
+let W = E.weeks(S()).findIndex((w, i) => !E.isHist(S(), i) && E.dueInWeek(S(), i, '苗') === 0);
 click([...app.querySelectorAll('[data-action="selectWeek"]')].find(b => +b.dataset.idx === W));
-ok(sel() === W && !E.isHist(S(), W) && E.seedDueInWeek(S(), W) === 0, 'selected a payable-free future week (idx ' + W + ')');
+ok(sel() === W && !E.isHist(S(), W) && E.dueInWeek(S(), W, '苗') === 0, 'selected a payable-free future week (idx ' + W + ')');
 
 // ---------- 1. ASSUMPTIONS: every group drives its forecast field ----------
 nav('assume');
@@ -109,22 +109,26 @@ setV(byArr('fixed', fIdx, 'amount'), '212100');
 setV(byArr('fixed', fIdx, 'months'), '' + wMonth, 'input');
 ok(E.computed(S(), W).loan > beforeLoan, 'fixed payment+到期月份 flows into 借款/固定 for that month');
 
-// ---------- 4. 苗款 payable date → that week's seedling outflow ----------
+// ---------- 4. 进货验货 shipment → 苗款 payable (week-picker) → seedling outflow ----------
+nav('hist');
+click([...app.querySelectorAll('[data-action="addRow"]')].find(b => b.dataset.arr === 'shipments'));
+const shIdx = S().shipments.length - 1;
+setV(byArr('shipments', shIdx, 'qty'), '10000');
+setV(byArr('shipments', shIdx, 'amount'), '60000', 'input');
+const newShipId = S().shipments[shIdx].id;
+ok(E.shipUnit(S().shipments[shIdx]) === 6, '单价 auto-calculates (60000/10000 = 6.00)');
 nav('seedpay');
-click([...app.querySelectorAll('[data-action="addRow"]')].find(b => b.dataset.arr === 'seedPayables'));
-const pIdx = S().seedPayables.length - 1;
-const wk = E.weeks(S())[W];
-setV(byArr('seedPayables', pIdx, 'qty'), '10000');
-setV(byArr('seedPayables', pIdx, 'price'), '6', 'input');
-setV(byArr('seedPayables', pIdx, 'payby'), wk.startISO, 'input');
-ok(approx(E.seedDueInWeek(S(), W), 60000, 1), 'payable qty×price due inside week W = 60000');
-ok(E.computed(S(), W).seedling >= 60000 - 1, 'dated payable becomes week W 苗款 forecast');
-// urgency select persists
-setV(byArr('seedPayables', pIdx, 'urgency'), '一级', 'change');
-ok(S().seedPayables[pIdx].urgency === '一级', '紧急度 select persists');
-// note column persists
-setV(byArr('seedPayables', pIdx, 'note'), '测试备注', 'input');
-ok(S().seedPayables[pIdx].note === '测试备注', '备注 column persists');
+click([...app.querySelectorAll('[data-action="addRow"]')].find(b => b.dataset.arr === 'payables'));
+const paIdx = S().payables.length - 1;
+setV(byArr('payables', paIdx, 'shipmentId'), newShipId, 'change');
+click(app.querySelector('[data-action="pickWeek"][data-arr="payables"][data-idx="' + paIdx + '"][data-week="' + W + '"]'));
+ok(S().payables[paIdx].payWeek === W, '付款周 tile click sets payWeek = ' + W);
+ok(approx(E.dueInWeek(S(), W, '苗'), 60000, 1), 'payable (default full shipment amount) due in week W = 60000');
+ok(E.computed(S(), W).seedling >= 60000 - 1, 'scheduled payable becomes week W 苗款 forecast');
+setV(byArr('payables', paIdx, 'urgency'), '一级', 'change');
+ok(S().payables[paIdx].urgency === '一级', '紧急度 select persists');
+setV(byArr('payables', paIdx, 'amount'), '25000');   // split / partial pay
+ok(approx(E.dueInWeek(S(), W, '苗'), 25000, 1), 'partial amount overrides the full shipment amount (split)');
 
 // ---------- 5. HISTORICAL actuals replace forecast in the series ----------
 nav('hist');
@@ -137,12 +141,9 @@ setMap('sales', /xj35:qty$/, '100');
 setMap('sales', /xj35:amt$/, '2500');
 ok(S().sales[HW + ':xj35:qty'] === '100' && S().sales[HW + ':xj35:amt'] === '2500', 'sales qty/amt stored per week');
 ok(app.innerHTML.includes('25.00'), 'sales 平均单价 auto-calculates (2500/100=25.00)');
-// purchasing qty+amt+frt → total incl freight
-setMap('purch', /pmsmall:qty$/, '10');
-setMap('purch', /pmsmall:amt$/, '1000');
-setMap('purch', /pmsmall:frt$/, '234');
-ok(S().purch[HW + ':pmsmall:frt'] === '234', 'purchasing 运费 stored');
-ok(app.innerHTML.indexOf('1,234') >= 0 || E.num(S().purch[HW + ':pmsmall:amt']) + E.num(S().purch[HW + ':pmsmall:frt']) === 1234, '进货合计 includes freight (1000+234=1234)');
+// 销售明细 国内 sum auto-fills the 现金流实际 国内收款 when no manual actual keyed
+const HWdomSales = E.salesReceipts(S(), HW).domestic;
+ok(HWdomSales >= 2500 && approx(E.eff(S(), HW, 'domestic'), HWdomSales), '销售明细 国内 sum auto-fills 国内收款 (eff fallback)');
 // actual cash entry replaces forecast in eff/series
 setMap('actual', /:foreign$/, '654321');
 ok(E.eff(S(), HW, 'foreign') === 654321, 'actual 国外收款 replaces forecast (eff) for elapsed week');

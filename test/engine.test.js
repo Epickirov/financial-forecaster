@@ -20,11 +20,12 @@ test('shipped defaultModel keeps names/specs but clears all financial figures', 
   var d = FFStore.defaultModel();
   assert.strictEqual(d.config.openingBalance, '', 'opening balance cleared');
   Object.keys(d.assume).forEach(function (k) { assert.strictEqual(d.assume[k], '', 'assume.' + k + ' cleared'); });
-  ['sales', 'purch', 'fcst', 'actual', 'collect'].forEach(function (m) { assert.deepStrictEqual(d[m], {}, m + ' empty'); });
+  ['sales', 'fcst', 'actual', 'collect'].forEach(function (m) { assert.deepStrictEqual(d[m], {}, m + ' empty'); });
+  assert.deepStrictEqual(d.payables, [], 'payables empty');
   d.rents.forEach(function (r) { assert.ok(r.name, 'rent name kept'); assert.strictEqual(r.amount, '', 'rent amount cleared'); });
   d.fixed.forEach(function (r) { assert.ok(r.name, 'fixed name kept'); assert.strictEqual(r.amount, '', 'fixed amount cleared'); });
   d.customers.forEach(function (c) { assert.ok(c.name, 'customer name kept'); assert.strictEqual(c.outstanding, '', 'customer balance cleared'); });
-  d.seedPayables.forEach(function (p) { assert.ok(p.supplier && p.spec, 'supplier+spec kept'); assert.strictEqual(p.qty, '', 'payable qty cleared'); assert.strictEqual(p.price, '', 'payable price cleared'); assert.strictEqual(p.payby, '', 'payable due date cleared'); });
+  d.shipments.forEach(function (sh) { assert.ok(sh.supplier && sh.spec, 'shipment supplier+spec kept'); assert.strictEqual(sh.qty, '', 'shipment qty cleared'); assert.strictEqual(sh.amount, '', 'shipment amount cleared'); assert.strictEqual(sh.iq, '', 'shipment IQ cleared'); });
 });
 
 // ---- week grid -----------------------------------------------------------
@@ -72,17 +73,36 @@ test('arCollectInWeek feeds computed.domestic additively', function () {
   approx(after.domestic, after._domSales + after._arCollect);
 });
 
-// ---- 苗款 register drives seedling timing --------------------------------
-test('a payable dated inside a week becomes that week 苗款 outflow', function () {
+// ---- 苗/花应付款 register drives 苗款/开花株款 timing; freight → materials --
+test('scheduled payables become that week 苗/花 outflow; freight hits materials', function () {
   var s = fresh();
-  var weeks = E.weeks(s);
-  // find the week containing the first payable's payby date
-  var p = s.seedPayables[0]; // 山东绿航, payby 2026-06-30
-  var wi = weeks.findIndex(function (w) { return p.payby >= w.startISO && p.payby <= w.endISO; });
-  assert.ok(wi >= 0);
-  var due = E.seedDueInWeek(s, wi);
-  approx(due, parseFloat(p.qty) * parseFloat(p.price) + /* any other payable in same week */ (due - parseFloat(p.qty) * parseFloat(p.price)));
-  assert.ok(E.computed(s, wi).seedling >= parseFloat(p.qty) * parseFloat(p.price) - 1);
+  var wT = E.weeks(s).findIndex(function (w) { return '2026-05-26' >= w.startISO && '2026-05-26' <= w.endISO; });
+  approx(E.dueInWeek(s, wT, '苗'), 310065);   // pa1 (sh1), blank amount → full shipment amount
+  approx(E.dueInWeek(s, wT, '花'), 40366);    // pa3 (sh3)
+  approx(E.computed(s, wT).seedling, 310065); // payables override the assumption baseline
+  approx(E.computed(s, wT).flowering, 40366);
+  approx(E.freightDueInWeek(s, wT), 1046.6 + 687 + 1432.31, 1e-3);
+  approx(E.payOf(s, wT, 'materials') - E.eff(s, wT, 'materials'), E.freightDueInWeek(s, wT), 1e-3);
+});
+
+test('payableBuckets groups by 渠道 × time-bucket × 紧急度 and respects splits', function () {
+  var s = fresh();
+  var b = E.payableBuckets(s, '苗');
+  approx(b['国内'].total['三级'], 310065);   // pa1
+  approx(b['国内'].total['二级'], 224958);   // pa2
+  approx(b['国内']._t.total, 535023);
+  s.payables[0].amount = '100000';           // split / partial pay overrides the full amount
+  approx(E.payableBuckets(s, '苗')['国内'].total['三级'], 100000);
+});
+
+test('销售明细 auto-fills 收款 (国外/国内) when no manual actual is keyed', function () {
+  var s = fresh();
+  var wT = E.weeks(s).findIndex(function (w) { return '2026-05-26' >= w.startISO && '2026-05-26' <= w.endISO; });
+  delete s.actual[wT + ':foreign']; delete s.actual[wT + ':domestic'];   // remove manual overrides
+  var r = E.salesReceipts(s, wT);
+  approx(r.foreign, 32456 + 102424);          // 国外 grp (fx28 + fx35)
+  approx(E.eff(s, wT, 'foreign'), r.foreign); // eff falls back to the sales sum
+  approx(E.eff(s, wT, 'domestic'), r.domestic);
 });
 
 // ---- actual replaces forecast for elapsed weeks --------------------------

@@ -40,15 +40,17 @@ ok(/财务总览/.test(app.innerHTML), 'dashboard title renders');
 ok(/全年收款/.test(app.innerHTML) && /现金轨迹/.test(app.innerHTML), 'KPI row + chart render');
 
 // 2) every nav page renders without throwing
-const pages = { hist: '销售明细', fcst: '收款测算', assume: '销量与淘汰', seedpay: '应付苗款登记', ar: '客户应收账款', report: '财务预测报告' };
+const pages = { hist: '销售明细', fcst: '收款测算', assume: '销量与淘汰', seedpay: '应付款登记', logi: '各批次运费', ar: '客户应收账款', report: '财务预测报告' };
 Object.keys(pages).forEach(p => {
   click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === p));
   ok(app.innerHTML.includes(pages[p]), 'page "' + p + '" renders (' + pages[p] + ')');
 });
 
-// 3) seed payables now has the 备注 column wired
+// 3) 苗/花应付款 shows the bucket summary; 历史数据 has the per-supplier 进货验货
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'seedpay'));
-ok(app.innerHTML.includes('备注') && app.querySelector('[id^="r|seedPayables|0|note"]'), '苗款 备注 column is editable');
+ok(app.innerHTML.includes('欠款(逾期)') && app.innerHTML.includes('应付款登记'), '苗/花应付款 breakdown buckets + register render');
+click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'hist'));
+ok(app.innerHTML.includes('进货验货 · 按供应商') && app.querySelector('select[data-arr="shipments"][data-key="type"]'), '历史数据 进货验货 is a per-supplier shipment register');
 
 // 4) editing an assumption creates a live "本周覆盖" badge
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'assume'));

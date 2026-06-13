@@ -4,40 +4,28 @@
  * =====================================================================
  *
  * The shipped app (src/store.js → defaultModel) seeds a BLANK template:
- * structure and names, but zero financial figures. The test suite, however,
- * needs realistic numbers to assert that drivers flow through to the right
- * outputs. That demo data lives HERE — in test/, never in src/ — so it is
- * never bundled into dist/ and never published to the deployed site.
+ * structure and names, but zero financial figures. The test suite needs
+ * realistic numbers to assert drivers flow through. That demo data lives
+ * HERE — in test/, never in src/ — so it never ships in dist/.
  *
- * This mirrors the original seeded model verbatim; engine + DOM tests inject
- * it as the live state so their numeric expectations hold.
+ * Data model (post-redesign): shipments (进货验货, per supplier) + payables
+ * (苗/花应付款, each links a shipment via shipmentId and a payWeek).
  * ===================================================================== */
 var E = require('../src/engine.js');
 
 function demoModel() {
   var weeks = E.genWeeks('2026-02-17', '2027-02-05');
-  // find the week covering 2026-05-26 (anchors the seeded actuals)
   var wTarget = 0;
   weeks.forEach(function (w, i) { if ('2026-05-26' >= w.startISO && '2026-05-26' <= w.endISO) wTarget = i; });
+  var W = '' + wTarget, Wn = '' + (wTarget + 1);
 
   var sales = {};
   var seedSales = { fx28: [1940, 32456], fx35: [4100, 102424], xj28: [2206, 30053], xj35: [17812, 314316], dn28: [613, 9203], dn35: [3720, 60496], cut: [1940, 9490] };
   Object.keys(seedSales).forEach(function (c) {
-    var q = seedSales[c][0], a = seedSales[c][1];
-    sales[wTarget + ':' + c + ':qty'] = '' + q;
-    sales[wTarget + ':' + c + ':amt'] = '' + a;
+    sales[wTarget + ':' + c + ':qty'] = '' + seedSales[c][0];
+    sales[wTarget + ':' + c + ':amt'] = '' + seedSales[c][1];
   });
 
-  var purch = {};
-  var seedP = { pmmed: [3006, 22545, 1046.6], pmlarge: [1919, 23943, 687], pflwsmall: [2700, 40366, 1432.31], pflwlarge: [180, 3420, 0] };
-  Object.keys(seedP).forEach(function (c) {
-    var q = seedP[c][0], a = seedP[c][1], f = seedP[c][2];
-    purch[wTarget + ':' + c + ':qty'] = '' + q;
-    purch[wTarget + ':' + c + ':amt'] = '' + a;
-    if (f) purch[wTarget + ':' + c + ':frt'] = '' + f;
-  });
-
-  // sample actuals for the seeded week, so forecast-vs-actual variance is visible
   var actualSeed = {};
   actualSeed[wTarget + ':foreign'] = '118000';
   actualSeed[wTarget + ':domestic'] = '372000';
@@ -84,15 +72,19 @@ function demoModel() {
       { name: '切花批发商', outstanding: '33000', note: '', cat: '国内' }
     ],
     assumeWeek: {}, customItems: [],
-    seedPayables: [
-      { supplier: '山东绿航', spec: '2.8寸成熟苗', qty: '41342', price: '7.5', payby: '2026-06-30', urgency: '三级', note: 'IQ26020' },
-      { supplier: '和鸣花卉', spec: '3.5寸成熟苗', qty: '48904', price: '4.6', payby: '2026-06-27', urgency: '二级', note: 'IQ26042' },
-      { supplier: '漳州新百盛', spec: '2.8寸成熟苗', qty: '126000', price: '6.97', payby: '2026-07-15', urgency: '四级', note: 'KMTYP-25040' },
-      { supplier: '厦门品诚', spec: '2.8寸成熟苗', qty: '91000', price: '7.36', payby: '2026-07-31', urgency: '四级', note: 'KMTYP-25032' },
-      { supplier: '汇海生物', spec: '瓶苗', qty: '10000', price: '12.4', payby: '2026-06-20', urgency: '三级', note: '1月出瓶款' },
-      { supplier: '佛山润喆卉', spec: '3.5寸成熟苗', qty: '30000', price: '12', payby: '2026-08-10', urgency: '四级', note: 'KMTYP-25041' }
+    // 进货验货 — per-supplier shipments (单价 = 金额/数量 auto)
+    shipments: [
+      { id: 'sh1', type: '苗', channel: '国内', supplier: '山东绿航', spec: '2.8寸成熟苗', qty: '41342', amount: '310065', iq: 'IQ26020', freight: '1046.6', freightWeek: W },
+      { id: 'sh2', type: '苗', channel: '国内', supplier: '和鸣花卉', spec: '3.5寸成熟苗', qty: '48904', amount: '224958', iq: 'IQ26042', freight: '687', freightWeek: W },
+      { id: 'sh3', type: '花', channel: '国外', supplier: '漳州新百盛', spec: '大花', qty: '2700', amount: '40366', iq: 'KMTYP-25040', freight: '1432.31', freightWeek: W }
     ],
-    sales: sales, purch: purch, fcst: {}, actual: actualSeed, collect: {}
+    // 苗/花应付款 — payables link a shipment + a pay week; blank amount = full shipment amount
+    payables: [
+      { id: 'pa1', shipmentId: 'sh1', payWeek: W, amount: '', urgency: '三级' },
+      { id: 'pa2', shipmentId: 'sh2', payWeek: Wn, amount: '', urgency: '二级' },
+      { id: 'pa3', shipmentId: 'sh3', payWeek: W, amount: '', urgency: '四级' }
+    ],
+    sales: sales, fcst: {}, actual: actualSeed, collect: {}
   };
 }
 

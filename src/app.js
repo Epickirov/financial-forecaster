@@ -40,8 +40,8 @@
     var navDef = [
       { id: 'dash', label: '总览', sym: '◧' }, { id: 'hist', label: '历史数据', sym: '◷' },
       { id: 'fcst', label: '预测', sym: '⤴' }, { id: 'assume', label: '假设', sym: '⚙' },
-      { id: 'seedpay', label: '苗款', sym: '❀' }, { id: 'ar', label: '应收账款', sym: '▤' },
-      { id: 'report', label: '管理层报告', sym: '⎙' }
+      { id: 'seedpay', label: '苗/花应付款', sym: '❀' }, { id: 'logi', label: '物流成本', sym: '⇄' },
+      { id: 'ar', label: '应收账款', sym: '▤' }, { id: 'report', label: '管理层报告', sym: '⎙' }
     ];
     var page = S.page;
     var navItems = navDef.map(function (n) {
@@ -55,7 +55,8 @@
       hist: ['历史数据', '按周录入实际销售、进货与现金流'],
       fcst: ['预测', '由假设自动生成 · 每周可覆盖'],
       assume: ['假设', '逐周设定 · 默认继承上一周 · 驱动该周预测'],
-      seedpay: ['苗款', '应付苗款登记 · 供应商、规格、数量、单价与付款日期'],
+      seedpay: ['苗/花应付款', '按付款周登记应付苗款 / 开花株款 · 分国内 / 国外 · 含逾期与紧急度汇总'],
+      logi: ['物流成本', '各批次运费 · 按付款周计入「生产物资运费」现金流'],
       ar: ['应收账款', '客户应收余额与每周预计回款'],
       report: ['管理层报告', '一页式 · 非财务人员也能读懂']
     };
@@ -122,7 +123,7 @@
 
     // ---- expense donut (full year) ----
     var payTotals = {};
-    E.PAYCATS.forEach(function (c) { payTotals[c] = ser.reduce(function (s, x) { return s + E.eff(S, x.i, c); }, 0); });
+    E.PAYCATS.forEach(function (c) { payTotals[c] = ser.reduce(function (s, x) { return s + E.payOf(S, x.i, c); }, 0); });
     var donutItems = E.PAYCATS.map(function (c) { return { k: E.PAY_NAMES[c], v: payTotals[c], color: E.PAY_COLORS[c] }; })
       .sort(function (a, b) { return b.v - a.v; }).filter(function (x) { return x.v > 0; });
     var dashDonut = E.donut(donutItems, 65, 65, 56, 31);
@@ -178,16 +179,16 @@
     var salesQsum = salesRows.reduce(function (s, r) { return s + num(r.qty); }, 0);
     var salesAsum = salesRows.reduce(function (s, r) { return s + num(r.amt); }, 0);
 
-    var purchRows = E.PURCHCATS.map(function (c) {
-      var qk = selIdx + ':' + c.id + ':qty', ak = selIdx + ':' + c.id + ':amt', fk = selIdx + ':' + c.id + ':frt';
-      return { name: c.name, qtyKey: qk, amtKey: ak, frtKey: fk,
-        qty: S.purch[qk] != null ? S.purch[qk] : '', amt: S.purch[ak] != null ? S.purch[ak] : '', frt: S.purch[fk] != null ? S.purch[fk] : '' };
-    });
-    var purchAsum = purchRows.reduce(function (s, r) { return s + num(r.amt) + num(r.frt); }, 0);
+    // (进货验货 is now a per-supplier shipment register — see shipmentRows below)
 
     // ---- forecast/historical cash rows (selected week) ----
     var recDefs = E.RECEIPT_DEFS, payRowDefs = E.PAY_ROW_DEFS;
-    function fcstRow(f, label) { return { key: selIdx + ':' + f, label: label, val: (S.fcst[selIdx + ':' + f]) != null ? S.fcst[selIdx + ':' + f] : '', ph: '≈' + yuan0(E.computed(S, selIdx)[f] || 0) }; }
+    function fcstRow(f, label) {
+      var sub = '';
+      if (f === 'seedling') sub = '本周(第' + (curW + 1) + '周)应付苗款合计 ' + fmt(E.dueInWeek(S, curW, '苗'));
+      else if (f === 'flowering') sub = '本周(第' + (curW + 1) + '周)应付开花株款合计 ' + fmt(E.dueInWeek(S, curW, '花'));
+      return { key: selIdx + ':' + f, label: label, sub: sub, val: (S.fcst[selIdx + ':' + f]) != null ? S.fcst[selIdx + ':' + f] : '', ph: '≈' + yuan0(E.computed(S, selIdx)[f] || 0) };
+    }
     var fcstReceiptRows = recDefs.map(function (d) { return fcstRow(d[0], d[1]); });
     var fcstPayRows = payRowDefs.map(function (d) { return fcstRow(d[0], d[1]); });
 
@@ -199,7 +200,10 @@
     }
     function histRow(f, label) {
       var v = acVar(f);
-      return { key: selIdx + ':' + f, label: label, val: (S.actual[selIdx + ':' + f]) != null ? S.actual[selIdx + ':' + f] : '', ph: '预测 ' + yuan0(E.fcOf(S, selIdx, f)), varPct: v.pct, varColor: v.color };
+      var ph;
+      if (f === 'foreign' || f === 'domestic') { var sr = E.salesReceipts(S, selIdx); ph = '销售明细 ' + yuan0(f === 'foreign' ? sr.foreign : sr.domestic); }
+      else ph = '预测 ' + yuan0(E.fcOf(S, selIdx, f));
+      return { key: selIdx + ':' + f, label: label, val: (S.actual[selIdx + ':' + f]) != null ? S.actual[selIdx + ':' + f] : '', ph: ph, varPct: v.pct, varColor: v.color };
     }
     var histReceiptRows = recDefs.map(function (d) { return histRow(d[0], d[1]); });
     var histPayRows = payRowDefs.map(function (d) { return histRow(d[0], d[1]); });
@@ -229,19 +233,36 @@
     var revBreakForeign = [merge({ label: '国外大花' }, revBreak.forLarge), merge({ label: '国外小花' }, revBreak.forSmall)];
     var revBreakDom = [merge({ label: '国内大花' }, revBreak.domLarge), merge({ label: '国内小花' }, revBreak.domSmall), merge({ label: '染色花' }, revBreak.dye), merge({ label: '切花' }, revBreak.cut)];
 
-    // ---- seedling payables register ----
-    var dayMs = 86400000, asOf = S.config.asOfISO;
-    var seedRows = S.seedPayables.map(function (p, i) {
-      var amt = num(p.qty) * num(p.price);
-      var overdue = p.payby && p.payby < asOf;
-      var soon = p.payby && p.payby >= asOf && (new Date(p.payby) - new Date(asOf)) / dayMs <= 30;
-      return { idx: i, supplier: p.supplier, spec: p.spec, qty: p.qty, price: p.price, payby: p.payby, urgency: p.urgency, note: p.note != null ? p.note : '',
-        amt: fmt(amt), uColor: E.URGENCY_COLORS[p.urgency] || 'var(--muted)',
-        statusColor: overdue ? 'var(--rose)' : soon ? 'var(--gold)' : 'var(--muted)',
-        statusText: overdue ? '已逾期' : soon ? '30天内' : '未到期' };
+    // ---- shipments (进货验货) / payables (苗·花应付款) / logistics ----------
+    var shipmentRows = (S.shipments || []).map(function (sh, i) {
+      return { idx: i, id: sh.id, type: sh.type || '苗', channel: sh.channel || '国内', supplier: sh.supplier, spec: sh.spec,
+        qty: sh.qty != null ? sh.qty : '', amount: sh.amount != null ? sh.amount : '', iq: sh.iq != null ? sh.iq : '',
+        unit: num(sh.qty) > 0 ? (num(sh.amount) / num(sh.qty)).toFixed(2) : '—',
+        freight: sh.freight != null ? sh.freight : '', freightWeek: (sh.freightWeek === '' || sh.freightWeek == null) ? '' : parseInt(sh.freightWeek, 10) };
     });
-    var seedTotal = fmt(S.seedPayables.reduce(function (s, p) { return s + num(p.qty) * num(p.price); }, 0));
-    var seedSoon = fmt(S.seedPayables.reduce(function (s, p) { if (p.payby && p.payby >= asOf && (new Date(p.payby) - new Date(asOf)) / dayMs <= 30) return s + num(p.qty) * num(p.price); return s; }, 0));
+    var payablesView = (S.payables || []).map(function (p, i) {
+      var m = E.payableMeta(S, p);
+      return { idx: i, id: p.id, shipmentId: p.shipmentId || '', type: m.type, channel: m.channel,
+        supplier: m.supplier, spec: m.spec, iq: m.iq, qty: m.qty,
+        amount: p.amount != null ? p.amount : '', amountFull: yuan0(E.payableAmt(S, p)),
+        urgency: p.urgency || '三级', uColor: E.URGENCY_COLORS[p.urgency] || 'var(--muted)',
+        payWeek: (p.payWeek === '' || p.payWeek == null) ? '' : parseInt(p.payWeek, 10) };
+    });
+    function fmtBuckets(b) {
+      var out = {};
+      E.CHANNELS.forEach(function (ch) {
+        out[ch] = { _t: {} };
+        ['overdue', 'thisWeek', 'nextWeek', 'thisMonth', 'total'].forEach(function (bk) {
+          out[ch][bk] = {}; out[ch]._t[bk] = fmt(b[ch]._t[bk]);
+          E.URGENCY_OPTIONS.forEach(function (u) { out[ch][bk][u] = b[ch][bk][u] ? fmt(b[ch][bk][u]) : '·'; });
+        });
+      });
+      return out;
+    }
+    var bucketsMiao = fmtBuckets(E.payableBuckets(S, '苗'));
+    var bucketsHua = fmtBuckets(E.payableBuckets(S, '花'));
+    var freightTotal = (S.shipments || []).reduce(function (s, sh) { return s + num(sh.freight); }, 0);
+    var weeksList = ser.map(function (s) { return s.w; });
 
     var upcoming = ser.slice(selIdx, selIdx + 9).map(function (s) {
       return { label: s.w.label, month: s.w.month + '月', cin: wan(s.cin), pays: wan(s.pays),
@@ -325,10 +346,10 @@
       selVarStr: (hasActual ? (selVarP >= 0 ? '+' : '') + selVarP.toFixed(1) + '%' : '—'), selVarColor: !hasActual ? 'var(--muted)' : (selVarP >= 0 ? 'var(--leaf)' : 'var(--rose)'),
       histWeeks: histWeeks, fcstWeeks: fcstWeeks, allWeeks: allWeeks,
       salesRows: salesRows, salesQstr: salesQsum.toLocaleString('zh-CN'), salesAstr: fmt(salesAsum),
-      purchRows: purchRows, purchAstr: fmt(purchAsum),
       fcstReceiptRows: fcstReceiptRows, fcstPayRows: fcstPayRows, histReceiptRows: histReceiptRows, histPayRows: histPayRows,
       revBreak: revBreak, revBreakForeign: revBreakForeign, revBreakDom: revBreakDom,
-      seedRows: seedRows, seedTotal: seedTotal, seedSoon: seedSoon, urgencyOptions: E.URGENCY_OPTIONS,
+      shipmentRows: shipmentRows, payablesView: payablesView, bucketsMiao: bucketsMiao, bucketsHua: bucketsHua,
+      freightTotal: fmt(freightTotal), weeksList: weeksList, curW: curW, urgencyOptions: E.URGENCY_OPTIONS,
       upcoming: upcoming, assumeGroups: assumeGroups, rents: S.rents, fixed: S.fixed,
       custRows: custRows, arOutWan: fmt(arOut), arColWan: fmt(arCol), catSummary: catSummary, catOptions: E.AR_CATS,
       repCompany: S.config.name, repFy: fy, repKpis: repKpis, repLines: repLines
@@ -498,9 +519,19 @@
         '<td class="num" style="padding:5px 6px; border-bottom:1px solid #f1ebdf; text-align:right; color:var(--muted);">' + esc(r.price) + '</td></tr>';
     }).join('');
 
-    var purch = V.purchRows.map(function (r) {
-      function cell(key, val) { return '<td style="padding:3px 4px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" ' + bMap('purch', key) + ' value="' + escA(val) + '" placeholder="0" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 6px; font-size:12px;"></td>'; }
-      return '<tr><td style="padding:4px 4px; border-bottom:1px solid #f1ebdf; font-size:12.5px;">' + esc(r.name) + '</td>' + cell(r.qtyKey, r.qty) + cell(r.amtKey, r.amt) + cell(r.frtKey, r.frt) + '</tr>';
+    var shipTypeOpt = function (sel) { return E.PTYPES.map(function (t) { return '<option value="' + t.id + '"' + (t.id === sel ? ' selected' : '') + '>' + (t.id === '花' ? '开花株' : '苗') + '</option>'; }).join(''); };
+    var shipChanOpt = function (sel) { return E.CHANNELS.map(function (c) { return '<option value="' + escA(c) + '"' + (c === sel ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join(''); };
+    function shipCell(r, key, val, mode) {
+      return '<td style="padding:3px 4px; border-bottom:1px solid #f1ebdf;"><input class="fld' + (mode === 'txt' ? ' txt' : '') + '"' + (mode && mode !== 'txt' ? ' inputmode="' + mode + '"' : '') + ' ' + bArr('shipments', r.idx, key) + ' value="' + escA(val) + '" style="width:100%; ' + (mode === 'txt' ? '' : 'text-align:right; ') + 'border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 6px; font-size:12px;"></td>';
+    }
+    var ship = V.shipmentRows.map(function (r) {
+      function selc(key, html) { return '<td style="padding:3px 4px; border-bottom:1px solid #f1ebdf;"><select class="fld txt" ' + bArr('shipments', r.idx, key) + ' style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 4px; font-size:11.5px;">' + html + '</select></td>'; }
+      return '<tr>' + selc('type', shipTypeOpt(r.type)) + selc('channel', shipChanOpt(r.channel)) +
+        shipCell(r, 'supplier', r.supplier, 'txt') + shipCell(r, 'spec', r.spec, 'txt') +
+        shipCell(r, 'qty', r.qty, 'numeric') + shipCell(r, 'amount', r.amount, 'numeric') +
+        '<td class="num" style="padding:3px 6px; border-bottom:1px solid #f1ebdf; text-align:right; color:var(--muted);">' + esc(r.unit) + '</td>' +
+        shipCell(r, 'iq', r.iq, 'txt') +
+        '<td style="padding:3px 4px; border-bottom:1px solid #f1ebdf; text-align:center;"><button data-action="delRow" data-arr="shipments" data-idx="' + r.idx + '" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:15px; opacity:.6;">×</button></td></tr>';
     }).join('');
 
     function cashRow(c) {
@@ -525,15 +556,12 @@
           '<tbody>' + sales +
             '<tr style="font-weight:700; color:var(--plum2);"><td style="padding:10px 6px;">合计</td><td class="num" style="padding:10px 6px; text-align:right;">' + esc(V.salesQstr) + '</td><td class="num" style="padding:10px 6px; text-align:right;">' + esc(V.salesAstr) + '</td><td></td></tr>' +
           '</tbody></table>', ' grid-column:1 / -1;') +
-        card(h2('进货验货') + '<div style="font-size:12px; color:var(--muted); margin:4px 0 14px;">本周到货苗 / 花 · 含运费</div>' +
-          '<table style="width:100%; border-collapse:collapse; font-size:13px;"><thead><tr style="color:var(--muted); font-size:11px;">' +
-            '<th style="text-align:left; font-weight:500; padding:6px 4px; border-bottom:1px solid var(--line);">种类</th>' +
-            '<th style="text-align:right; font-weight:500; padding:6px 4px; border-bottom:1px solid var(--line);">数量</th>' +
-            '<th style="text-align:right; font-weight:500; padding:6px 4px; border-bottom:1px solid var(--line);">金额</th>' +
-            '<th style="text-align:right; font-weight:500; padding:6px 4px; border-bottom:1px solid var(--line);">运费</th></tr></thead>' +
-          '<tbody>' + purch +
-            '<tr style="font-weight:700; color:var(--plum2);"><td colspan="3" style="padding:10px 4px;">进货合计（含运费）</td><td class="num" style="padding:10px 4px; text-align:right;">' + esc(V.purchAstr) + '</td></tr>' +
-          '</tbody></table>') +
+        card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;"><div>' + h2('进货验货 · 按供应商') + '<div style="font-size:12px; color:var(--muted);">各供应商批次：类型 · 渠道 · 规格 · 数量 · 金额（单价自动）· IQ号 → 路由至「苗/花应付款」；运费见「物流成本」</div></div>' +
+          '<button data-action="addRow" data-arr="shipments" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;">+ 添加进货验货项目</button></div>' +
+          '<div style="overflow-x:auto;"><table style="border-collapse:collapse; font-size:12px; min-width:900px; width:100%;"><thead><tr style="color:var(--muted); font-size:11px;">' +
+            ['类型', '渠道', '供应商', '规格', '数量(株)', '金额(元)', '单价', 'IQ号'].map(function (t, i) { return '<th style="text-align:' + (i >= 4 && i <= 6 ? 'right' : 'left') + '; font-weight:500; padding:6px 5px; border-bottom:1px solid var(--line);">' + t + '</th>'; }).join('') +
+            '<th style="width:28px; border-bottom:1px solid var(--line);"></th></tr></thead>' +
+          '<tbody>' + (ship || '<tr><td colspan="9" style="padding:14px; text-align:center; color:var(--muted); font-size:12px;">暂无批次 · 点击「+ 添加进货验货项目」录入供应商到货</td></tr>') + '</tbody></table></div>', ' grid-column:1 / -1;') +
         card(h2('现金流实际') + '<div style="font-size:12px; color:var(--muted); margin:4px 0 14px;">把当周预测改为实际（元）· 灰字为原预测值 · 右侧为偏差</div>' +
           '<div style="font-size:11px; color:var(--leaf); font-weight:700; margin:4px 0 8px;">收款</div>' + V.histReceiptRows.map(cashRow).join('') +
           '<div style="font-size:11px; color:var(--rose); font-weight:700; margin:14px 0 8px;">付款</div>' + V.histPayRows.map(cashRow).join('') +
@@ -548,9 +576,12 @@
   // ---------- FORECAST ----------
   function renderFcst(V) {
     function ovRow(c) {
-      return '<div style="display:flex; align-items:center; gap:10px; margin-bottom:7px;">' +
-        '<span style="flex:1; font-size:13px;">' + esc(c.label) + '</span>' +
-        '<input class="fld" inputmode="numeric" ' + bMap('fcst', c.key) + ' value="' + escA(c.val) + '" placeholder="' + escA(c.ph) + '" style="width:150px; text-align:right; ' + FLD + '"></div>';
+      return '<div style="margin-bottom:7px;">' +
+        '<div style="display:flex; align-items:center; gap:10px;">' +
+          '<span style="flex:1; font-size:13px;">' + esc(c.label) + '</span>' +
+          '<input class="fld" inputmode="numeric" ' + bMap('fcst', c.key) + ' value="' + escA(c.val) + '" placeholder="' + escA(c.ph) + '" style="width:150px; text-align:right; ' + FLD + '"></div>' +
+        (c.sub ? '<div style="font-size:10.5px; color:var(--gold); margin-top:2px;">' + esc(c.sub) + '</div>' : '') +
+        '</div>';
     }
     var up = V.upcoming.map(function (m) {
       return '<tr style="text-align:right; background:' + m.rowBg + ';">' +
@@ -646,36 +677,103 @@
       '</div></div>';
   }
 
-  // ---------- SEEDLING PAYABLES ----------
+  // week-tile picker: months listed, current week highlighted (gold), selected
+  // (leaf); hovering a tile shows its distance from "today" (+x周 / 本周).
+  function weekPicker(arr, idx, key, sel, V) {
+    var byMonth = {}, order = [];
+    V.weeksList.forEach(function (w) { if (!byMonth[w.month]) { byMonth[w.month] = []; order.push(w.month); } byMonth[w.month].push(w); });
+    var groups = order.map(function (m) {
+      var tiles = byMonth[m].map(function (w) {
+        var isSel = w.idx === sel, isCur = w.idx === V.curW, diff = w.idx - V.curW;
+        var tip = diff === 0 ? '本周' : (diff > 0 ? '+' + diff + '周' : diff + '周');
+        var bg = isSel ? 'var(--leaf)' : (isCur ? '#f6edda' : '#fff');
+        var col = isSel ? '#fff' : 'var(--ink)';
+        var bd = isSel ? 'var(--leaf)' : (isCur ? 'var(--gold)' : 'var(--line)');
+        return '<button data-action="pickWeek" data-arr="' + arr + '" data-idx="' + idx + '" data-key="' + key + '" data-week="' + w.idx + '" title="' + tip + '" style="flex:none; cursor:pointer; border:1px solid ' + bd + '; background:' + bg + '; color:' + col + '; border-radius:6px; padding:2px 5px; font-size:9.5px; line-height:1.2; min-width:40px;' + (isCur && !isSel ? ' font-weight:700;' : '') + '"><div style="font-size:8px; opacity:.65;">第' + (w.idx + 1) + '周</div><div class="num">' + esc(w.label) + '</div></button>';
+      }).join('');
+      return '<div style="margin-bottom:4px;"><div style="font-size:9px; color:var(--muted); margin-bottom:2px;">' + m + '月</div><div style="display:flex; flex-wrap:wrap; gap:3px;">' + tiles + '</div></div>';
+    }).join('');
+    return '<div style="max-height:140px; overflow-y:auto; border:1px solid var(--line); border-radius:8px; padding:6px; background:#fffdf8;">' + groups + '</div>';
+  }
+
+  // ---------- 苗 / 花 应付款 (combined; 国内/国外; week-keyed; bucket summary) --
   function renderSeedpay(V) {
     var opts = function (sel) { return V.urgencyOptions.map(function (u) { return '<option value="' + escA(u) + '"' + (u === sel ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join(''); };
-    var rows = V.seedRows.map(function (r) {
-      return '<tr>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld txt" ' + bArr('seedPayables', r.idx, 'supplier') + ' value="' + escA(r.supplier) + '" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:12.5px;"></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld txt" ' + bArr('seedPayables', r.idx, 'spec') + ' value="' + escA(r.spec) + '" placeholder="如 2.8寸成熟苗" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:12px;"></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" ' + bArr('seedPayables', r.idx, 'qty') + ' value="' + escA(r.qty) + '" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 6px; font-size:12.5px;"></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="decimal" ' + bArr('seedPayables', r.idx, 'price') + ' value="' + escA(r.price) + '" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 6px; font-size:12.5px;"></td>' +
-        '<td class="num" style="padding:4px 6px; border-bottom:1px solid #f1ebdf; text-align:right; font-weight:600; color:var(--plum2);">' + esc(r.amt) + '</td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" type="date" ' + bArr('seedPayables', r.idx, 'payby') + ' value="' + escA(r.payby) + '" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 6px; font-size:11.5px; color:var(--ink);"></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><select class="fld txt" ' + bArr('seedPayables', r.idx, 'urgency') + ' style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 4px; font-size:12px; font-weight:600; color:' + r.uColor + ';">' + opts(r.urgency) + '</select></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><span style="font-size:11px; color:' + r.statusColor + '; font-weight:600;">' + esc(r.statusText) + '</span></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld txt" ' + bArr('seedPayables', r.idx, 'note') + ' value="' + escA(r.note) + '" placeholder="—" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:12px;"></td>' +
-        '<td style="padding:4px 6px; border-bottom:1px solid #f1ebdf; text-align:center;"><button data-action="delRow" data-arr="seedPayables" data-idx="' + r.idx + '" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:15px; opacity:.6;">×</button></td></tr>';
+    function shipOptions(sel) {
+      var bySup = {}, order = [];
+      V.shipmentRows.forEach(function (sh) { if (!bySup[sh.supplier]) { bySup[sh.supplier] = []; order.push(sh.supplier); } bySup[sh.supplier].push(sh); });
+      var groups = order.map(function (sup) {
+        return '<optgroup label="' + escA(sup) + '">' + bySup[sup].map(function (sh) {
+          var lbl = (sh.type === '花' ? '开花株' : '苗') + ' · ' + (sh.spec || '—') + (sh.iq ? ' · ' + sh.iq : '') + (sh.qty ? ' · ' + sh.qty + '株' : '');
+          return '<option value="' + escA(sh.id) + '"' + (sh.id === sel ? ' selected' : '') + '>' + esc(lbl) + '</option>';
+        }).join('') + '</optgroup>';
+      }).join('');
+      return '<option value="">— 选择批次（供应商 / 规格 / IQ号）—</option>' + groups;
+    }
+    function bucketTable(bf) {
+      var BK = [['overdue', '欠款(逾期)', 'var(--rose)'], ['thisWeek', '本周', 'var(--plum)'], ['nextWeek', '下周', 'var(--gold)'], ['thisMonth', '本月内', 'var(--leaf)'], ['total', '合计', 'var(--plum2)']];
+      var head = '<tr style="color:var(--muted); font-size:10px;"><th style="text-align:left; font-weight:500; padding:3px 5px; border-bottom:1px solid var(--line);">类别</th>' +
+        V.urgencyOptions.map(function (u) { return '<th style="text-align:right; font-weight:600; padding:3px 5px; border-bottom:1px solid var(--line); color:' + (E.URGENCY_COLORS[u] || 'var(--muted)') + ';">' + esc(u) + '</th>'; }).join('') +
+        '<th style="text-align:right; font-weight:700; padding:3px 5px; border-bottom:1px solid var(--line);">合计</th></tr>';
+      var body = BK.map(function (bk) {
+        return '<tr><td style="padding:3px 5px; border-bottom:1px solid #f3eee2; font-size:11px; color:' + bk[2] + '; font-weight:600;">' + bk[1] + '</td>' +
+          V.urgencyOptions.map(function (u) { return '<td class="num" style="text-align:right; padding:3px 5px; border-bottom:1px solid #f3eee2; font-size:10.5px;">' + esc(bf[bk[0]][u]) + '</td>'; }).join('') +
+          '<td class="num" style="text-align:right; padding:3px 5px; border-bottom:1px solid #f3eee2; font-weight:700; font-size:10.5px;">' + esc(bf._t[bk[0]]) + '</td></tr>';
+      }).join('');
+      return '<table style="width:100%; border-collapse:collapse;">' + head + body + '</table>';
+    }
+    function typeBlock(label, bf) {
+      return card('<div class="serif" style="font-size:16px; font-weight:700; margin-bottom:10px;">' + label + ' · 应付汇总（按紧急度）</div>' +
+        E.CHANNELS.map(function (ch) {
+          return '<div style="margin-bottom:12px;"><div style="font-size:12px; font-weight:600; color:var(--plum2); margin-bottom:4px;">' + ch + '</div>' + bucketTable(bf[ch]) + '</div>';
+        }).join(''));
+    }
+    var entries = V.payablesView.map(function (p) {
+      var tag = (p.type === '花' ? '开花株' : '苗') + ' · ' + p.channel;
+      return '<div style="border:1px solid var(--line); border-radius:11px; padding:12px 14px; margin-bottom:10px; background:#fff;">' +
+        '<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">' +
+          '<span style="font-size:10.5px; font-weight:700; color:#fff; background:' + (p.type === '花' ? 'var(--gold)' : 'var(--plum)') + '; padding:2px 8px; border-radius:6px;">' + esc(tag) + '</span>' +
+          '<select class="fld txt" ' + bArr('payables', p.idx, 'shipmentId') + ' style="flex:1; min-width:210px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 8px; font-size:12px;">' + shipOptions(p.shipmentId) + '</select>' +
+          '<button data-action="delRow" data-arr="payables" data-idx="' + p.idx + '" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:16px; opacity:.6;">×</button>' +
+        '</div>' +
+        '<div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; margin-bottom:8px;">' +
+          '<div style="font-size:11px; color:var(--muted);">数量(株)<div class="num" style="font-size:13px; color:var(--ink);">' + esc(p.qty || '—') + '</div></div>' +
+          '<div style="font-size:11px; color:var(--muted);">IQ号<div class="num" style="font-size:13px; color:var(--ink);">' + esc(p.iq || '—') + '</div></div>' +
+          '<div style="font-size:11px; color:var(--muted);">应付金额(元)<input class="fld" inputmode="numeric" ' + bArr('payables', p.idx, 'amount') + ' value="' + escA(p.amount) + '" placeholder="' + escA(p.amountFull) + '" style="display:block; width:130px; text-align:right; ' + FLD + '"></div>' +
+          '<div style="font-size:11px; color:var(--muted);">紧急度<select class="fld txt" ' + bArr('payables', p.idx, 'urgency') + ' style="display:block; width:82px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 4px; font-size:12px; font-weight:600; color:' + p.uColor + ';">' + opts(p.urgency) + '</select></div>' +
+        '</div>' +
+        '<div style="font-size:11px; color:var(--muted); margin-bottom:3px;">付款周（金色＝本周 · 绿色＝已选 · 悬停看距今 +x周）</div>' + weekPicker('payables', p.idx, 'payWeek', p.payWeek, V) +
+      '</div>';
     }).join('');
 
-    function th(t, w, align) { return '<th style="text-align:' + (align || 'left') + '; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);' + (w ? ' width:' + w + ';' : '') + '">' + t + '</th>'; }
-
     return '<div>' +
-      '<div style="display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:14px; margin-bottom:16px;">' +
-        '<div style="background:#c0613f; color:#fff; border-radius:15px; padding:18px 20px;"><div style="font-size:13px; color:#ecc6ab;">应付苗款合计</div><div class="num" style="font-size:27px; font-weight:600; margin-top:6px;">' + esc(V.seedTotal) + '</div></div>' +
-        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);"><div style="font-size:13px; color:var(--muted);">30 天内到期</div><div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--gold);">' + esc(V.seedSoon) + '</div></div>' +
-        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); display:flex; align-items:center;"><div style="font-size:11.5px; color:var(--muted); line-height:1.6;">付款日期落在某周的苗款，将自动计入<b style="color:var(--plum);">该周预测的「苗款」支出</b>。</div></div>' +
+      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">' + typeBlock('苗款', V.bucketsMiao) + typeBlock('开花株款', V.bucketsHua) + '</div>' +
+      card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;"><div>' + h2('应付款登记') + '<div style="font-size:12px; color:var(--muted);">选择进货验货批次 → 应付金额（默认全额，可拆分/部分付）· 紧急度 · 付款周</div></div>' +
+        '<button data-action="addRow" data-arr="payables" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer;">+ 新增应付款</button></div>' +
+        (entries || '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">暂无应付款 · 先在「历史数据 · 进货验货」录入批次，再点「+ 新增应付款」选择批次并设定付款周</div>')) +
+    '</div>';
+  }
+
+  // ---------- 物流成本 (freight per shipment → 生产物资运费 cash flow) --------
+  function renderLogi(V) {
+    var rows = V.shipmentRows.map(function (r) {
+      var picked = r.freightWeek === '' ? '<span style="font-size:11px; color:var(--muted);">未设置</span>' : '<span style="font-size:11px; color:var(--plum2); font-weight:600;">第' + (r.freightWeek + 1) + '周</span>';
+      return '<div style="border:1px solid var(--line); border-radius:11px; padding:12px 14px; margin-bottom:10px; background:#fff;">' +
+        '<div style="display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; margin-bottom:8px;">' +
+          '<div style="font-size:11px; color:var(--muted); min-width:160px; flex:1;">供应商 / 规格<div style="font-size:13px; color:var(--ink);">' + esc(r.supplier || '—') + ' · ' + esc(r.spec || '—') + (r.iq ? ' · ' + esc(r.iq) : '') + '</div></div>' +
+          '<div style="font-size:11px; color:var(--muted);">运费(元)<input class="fld" inputmode="numeric" ' + bArr('shipments', r.idx, 'freight') + ' value="' + escA(r.freight) + '" placeholder="0" style="display:block; width:130px; text-align:right; ' + FLD + '"></div>' +
+          '<div style="font-size:11px; color:var(--muted);">付款周 ' + picked + '</div>' +
+        '</div>' +
+        '<div style="font-size:11px; color:var(--muted); margin-bottom:3px;">运费付款周（计入该周「生产物资运费」）</div>' + weekPicker('shipments', r.idx, 'freightWeek', r.freightWeek, V) +
+      '</div>';
+    }).join('');
+    return '<div>' +
+      '<div style="display:grid; grid-template-columns:1.3fr 2fr; gap:14px; margin-bottom:16px;">' +
+        '<div style="background:#b07a52; color:#fff; border-radius:15px; padding:18px 20px;"><div style="font-size:13px; color:#f0ddc9;">物流成本（运费）合计</div><div class="num" style="font-size:27px; font-weight:600; margin-top:6px;">' + esc(V.freightTotal) + '</div></div>' +
+        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); display:flex; align-items:center;"><div style="font-size:11.5px; color:var(--muted); line-height:1.6;">每批运费按所选「付款周」计入该周<b style="color:var(--plum);">生产物资运费</b>现金流，体现在现金轨迹与支出结构中。批次本身在「历史数据 · 进货验货」维护。</div></div>' +
       '</div>' +
-      card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;"><div>' + h2('应付苗款登记') + '<div style="font-size:12px; color:var(--muted);">供应商 · 规格 · 数量 · 单价 · 付款日期 · 紧急度 · 备注</div></div>' +
-        '<button data-action="addRow" data-arr="seedPayables" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer;">+ 新增项目</button></div>' +
-        '<div style="overflow-x:auto;"><table style="border-collapse:collapse; font-size:12.5px; min-width:1040px; width:100%;"><thead><tr style="color:var(--muted); font-size:11px;">' +
-          th('供应商', '150px') + th('规格', '120px') + th('数量(株)', '92px', 'right') + th('单价(元)', '74px', 'right') + th('金额', '96px', 'right') + th('付款日期', '140px') + th('紧急度', '84px') + th('状态', '78px') + th('备注', '150px') + '<th style="width:30px; border-bottom:1px solid var(--line);"></th>' +
-        '</tr></thead><tbody>' + rows + '</tbody></table></div>') +
+      card('<div style="margin-bottom:12px;">' + h2('各批次运费') + '<div style="font-size:12px; color:var(--muted);">为每个进货批次登记运费与付款周</div></div>' +
+        (rows || '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">暂无批次 · 先在「历史数据 · 进货验货」录入</div>')) +
     '</div>';
   }
 
@@ -731,7 +829,7 @@
       '</div></div>';
   }
 
-  var PAGES = { dash: renderDash, hist: renderHist, fcst: renderFcst, assume: renderAssume, seedpay: renderSeedpay, ar: renderAr, report: renderReport };
+  var PAGES = { dash: renderDash, hist: renderHist, fcst: renderFcst, assume: renderAssume, seedpay: renderSeedpay, logi: renderLogi, ar: renderAr, report: renderReport };
 
   // ===================================================================
   //  MOUNT + EVENTS
@@ -852,6 +950,7 @@
       case 'reset': if (confirm('确定重置所有数据？此操作不可撤销。')) store.reset(); break;
       case 'toggleUnit': store.toggleUnit(); break;
       case 'selectWeek': store.selectWeek(+btn.dataset.idx); break;
+      case 'pickWeek': store.editArr(btn.dataset.arr, +btn.dataset.idx, btn.dataset.key, +btn.dataset.week); break;
       case 'scrollChips': { var sc = document.getElementById('weekChipScroll'); if (sc && sc.scrollBy) sc.scrollBy({ left: (+btn.dataset.dir) * Math.max(sc.clientWidth * 0.8, 200), behavior: 'smooth' }); break; }
       case 'addRow': store.addRow(btn.dataset.arr); break;
       case 'delRow': store.delRow(btn.dataset.arr, +btn.dataset.idx); break;

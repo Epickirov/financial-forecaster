@@ -38,12 +38,9 @@
     { id: 'cut',  name: '切花',              grp: '切花' }
   ];
 
-  // ---- purchasing rows (历史数据 · 进货验货) ----------------------------
-  var PURCHCATS = [
-    { id: 'pmsmall', name: '小苗' }, { id: 'pmmed', name: '中苗' }, { id: 'pmlarge', name: '大苗' },
-    { id: 'pcmed', name: '代养中苗' }, { id: 'pclarge', name: '代养大苗' },
-    { id: 'pflwsmall', name: '小花' }, { id: 'pflwlarge', name: '大花' }
-  ];
+  // ---- payables model: product type (苗/花) × supplier channel (国内/国外) -
+  var CHANNELS = ['国内', '国外'];
+  var PTYPES = [{ id: '苗', label: '苗款' }, { id: '花', label: '开花株款' }];
 
   // ---- cash payment categories (drive 全年支出 / the expense donut) ------
   var PAYCATS = ['seedling', 'flowering', 'loan', 'payroll', 'utilrent', 'projects', 'materials', 'travel', 'custom'];
@@ -127,13 +124,81 @@
     }, 0);
   }
 
-  // 苗款: committed payable cash falling inside a week (drives timing from the register)
-  function seedDueInWeek(state, wIdx) {
-    var W = weeks(state), wk = W[wIdx]; if (!wk) return 0;
-    return (state.seedPayables || []).reduce(function (s, p) {
-      if (p.payby && p.payby >= wk.startISO && p.payby <= wk.endISO) return s + num(p.qty) * num(p.price);
-      return s;
+  // ---------- shipments (进货验货) & payables (苗/花应付款) ----------------
+  function shipmentById(state, id) {
+    var L = state.shipments || [];
+    for (var i = 0; i < L.length; i++) if (L[i].id === id) return L[i];
+    return null;
+  }
+  function shipUnit(sh) { if (!sh) return 0; var q = num(sh.qty); return q > 0 ? num(sh.amount) / q : 0; } // 单价 = 金额 / 数量
+  // a payable's type / channel / supplier / spec / iq / qty are inherited from its shipment
+  function payableMeta(state, p) {
+    var sh = shipmentById(state, p.shipmentId) || {};
+    return { type: sh.type || '苗', channel: sh.channel || '国内', supplier: sh.supplier || '', spec: sh.spec || '', iq: sh.iq || '', qty: sh.qty != null ? sh.qty : '' };
+  }
+  // payable amount: explicit override (for splitting / partial pay), else the full shipment amount
+  function payableAmt(state, p) {
+    if (p.amount !== undefined && p.amount !== '' && p.amount !== null) return num(p.amount);
+    var sh = shipmentById(state, p.shipmentId);
+    return sh ? num(sh.amount) : 0;
+  }
+  function payWeekOf(p) { var w = parseInt(p.payWeek, 10); return isNaN(w) ? null : w; }
+
+  // total payables due in a given week (optionally filtered by 苗/花)
+  function dueInWeek(state, wIdx, type) {
+    return (state.payables || []).reduce(function (s, p) {
+      if (payWeekOf(p) !== wIdx) return s;
+      if (type && payableMeta(state, p).type !== type) return s;
+      return s + payableAmt(state, p);
     }, 0);
+  }
+  // shipment freight (物流成本) charged to the cash flow in the week it is paid
+  function freightDueInWeek(state, wIdx) {
+    return (state.shipments || []).reduce(function (s, sh) {
+      var w = parseInt(sh.freightWeek, 10);
+      return (!isNaN(w) && w === wIdx) ? s + num(sh.freight) : s;
+    }, 0);
+  }
+  // index of the last week sharing the month of weeks[fromIdx]
+  function lastWeekOfMonth(state, fromIdx) {
+    var W = weeks(state); if (!W[fromIdx]) return fromIdx;
+    var m = W[fromIdx].month, last = fromIdx;
+    for (var i = fromIdx; i < W.length; i++) { if (W[i].month === m) last = i; else break; }
+    return last;
+  }
+  // payables of a type summed by 渠道 × time-bucket × 紧急度.
+  // buckets (cumulative, not mutually exclusive): overdue(逾期) / thisWeek / nextWeek /
+  // thisMonth(this week → last week of current month) / total(all outstanding).
+  function payableBuckets(state, type) {
+    var cw = currentWeekIdx(state), lwm = lastWeekOfMonth(state, cw), out = {};
+    var BUCKETS = ['overdue', 'thisWeek', 'nextWeek', 'thisMonth', 'total'];
+    CHANNELS.forEach(function (ch) {
+      out[ch] = { _t: {} };
+      BUCKETS.forEach(function (b) { out[ch][b] = {}; out[ch]._t[b] = 0; URGENCY_OPTIONS.forEach(function (u) { out[ch][b][u] = 0; }); });
+    });
+    (state.payables || []).forEach(function (p) {
+      var m = payableMeta(state, p); if (type && m.type !== type) return;
+      var ch = m.channel; if (!out[ch]) return;
+      var amt = payableAmt(state, p), u = URGENCY_OPTIONS.indexOf(p.urgency) >= 0 ? p.urgency : '三级', w = payWeekOf(p);
+      function add(b) { out[ch][b][u] += amt; out[ch]._t[b] += amt; }
+      add('total');
+      if (w === null) return;
+      if (w < cw) add('overdue');
+      if (w === cw) add('thisWeek');
+      if (w === cw + 1) add('nextWeek');
+      if (w >= cw && w <= lwm) add('thisMonth');
+    });
+    return out;
+  }
+
+  // 销售明细 → 收款: 国外 channels sum into foreign, everything else into domestic
+  function salesReceipts(state, wIdx) {
+    var sales = state.sales || {}, foreign = 0, domestic = 0;
+    SALESCATS.forEach(function (c) {
+      var a = num(sales[wIdx + ':' + c.id + ':amt']);
+      if (c.grp === '国外') foreign += a; else domestic += a;
+    });
+    return { foreign: foreign, domestic: domestic };
   }
 
   // 应收账款: per-week expected collection recorded against customers (custIdx:weekIdx).
@@ -170,10 +235,10 @@
     var arCollect = arCollectInWeek(state, wIdx);           // collection of OLD receivables
     var domestic = domSales + arCollect;                    // <-- 应收账款 now feeds 国内收款
 
-    // 苗款: committed payable due this week, else assumption baseline
-    var due = seedDueInWeek(state, wIdx);
-    var seedling = due > 0 ? due : g('seedlingMonthly') / WPM * g('seedlingPrice');
-    var flowering = volW * 0.12 * g('priceDomLarge') * 0.2;
+    // 苗款 / 开花株款: scheduled payables due this week (from the register), else assumption baseline
+    var dueMiao = dueInWeek(state, wIdx, '苗'), dueHua = dueInWeek(state, wIdx, '花');
+    var seedling = dueMiao > 0 ? dueMiao : g('seedlingMonthly') / WPM * g('seedlingPrice');
+    var flowering = dueHua > 0 ? dueHua : volW * 0.12 * g('priceDomLarge') * 0.2;
     var payroll = g('payrollMonthly') / WPM;
     var utilrent = g('utilitiesMonthly') / WPM + monthlyFrom(state.rents, m) / WPM;
     var projects = g('projectsMonthly') / WPM;
@@ -218,9 +283,20 @@
   // elapsed week, otherwise the FORECAST. This is the core "real data
   // replaces the assumption as time elapses" mechanic.
   function eff(state, wIdx, field) {
-    if (isHist(state, wIdx)) { var a = acOf(state, wIdx, field); if (a !== null) return a; }
+    if (isHist(state, wIdx)) {
+      var a = acOf(state, wIdx, field);
+      if (a !== null) return a;
+      // 收款 auto-fills from the 销售明细 sums when no manual actual is entered
+      if (field === 'foreign' || field === 'domestic') {
+        var r = salesReceipts(state, wIdx);
+        return field === 'foreign' ? r.foreign : r.domestic;
+      }
+    }
     return fcOf(state, wIdx, field);
   }
+  // outflow per category; 'materials' also carries the week's shipment freight (物流成本)
+  function payOf(state, wIdx, cat) { var v = eff(state, wIdx, cat); if (cat === 'materials') v += freightDueInWeek(state, wIdx); return v; }
+  function fcPayOf(state, wIdx, cat) { var v = fcOf(state, wIdx, cat); if (cat === 'materials') v += freightDueInWeek(state, wIdx); return v; }
 
   // ---------- the full-year series (the cash spine) ------------------------
   function series(state) {
@@ -229,7 +305,7 @@
     return W.map(function (w, i) {
       var open = bal;
       var cin = eff(state, i, 'foreign') + eff(state, i, 'domestic');
-      var pays = PAYCATS.reduce(function (s, c) { return s + eff(state, i, c); }, 0);
+      var pays = PAYCATS.reduce(function (s, c) { return s + payOf(state, i, c); }, 0);
       var close = open + cin - pays;
       bal = close;
       return { i: i, w: w, open: open, cin: cin, pays: pays, close: close, net: cin - pays, isHist: w.endISO <= cfg.asOfISO };
@@ -243,7 +319,7 @@
     for (var i = 0; i < W.length; i++) {
       var open = bal;
       var cin = fcOf(state, i, 'foreign') + fcOf(state, i, 'domestic');
-      var pays = PAYCATS.reduce(function (s, c) { return s + fcOf(state, i, c); }, 0);
+      var pays = PAYCATS.reduce(function (s, c) { return s + fcPayOf(state, i, c); }, 0);
       var close = open + cin - pays;
       bal = close; out.push(close);
     }
@@ -278,16 +354,19 @@
 
   var Engine = {
     WPM: WPM,
-    SALESCATS: SALESCATS, PURCHCATS: PURCHCATS, PAYCATS: PAYCATS,
+    SALESCATS: SALESCATS, PAYCATS: PAYCATS, CHANNELS: CHANNELS, PTYPES: PTYPES,
     RECEIPT_DEFS: RECEIPT_DEFS, PAY_ROW_DEFS: PAY_ROW_DEFS,
     PAY_NAMES: PAY_NAMES, PAY_COLORS: PAY_COLORS,
     URGENCY_OPTIONS: URGENCY_OPTIONS, URGENCY_COLORS: URGENCY_COLORS,
     AR_CATS: AR_CATS, AR_CAT_COLORS: AR_CAT_COLORS,
     num: num,
     genWeeks: genWeeks, weeks: weeks, currentWeekIdx: currentWeekIdx,
-    effA: effA, inheritedA: inheritedA, effAN: effAN,
-    monthlyFrom: monthlyFrom, seedDueInWeek: seedDueInWeek, arCollectInWeek: arCollectInWeek,
-    computed: computed, isHist: isHist, fcOf: fcOf, acOf: acOf, eff: eff,
+    effA: effA, inheritedA: inheritedA, effAN: effAN, monthlyFrom: monthlyFrom,
+    shipmentById: shipmentById, shipUnit: shipUnit, payableMeta: payableMeta, payableAmt: payableAmt,
+    payWeekOf: payWeekOf, dueInWeek: dueInWeek, freightDueInWeek: freightDueInWeek,
+    lastWeekOfMonth: lastWeekOfMonth, payableBuckets: payableBuckets, salesReceipts: salesReceipts,
+    arCollectInWeek: arCollectInWeek,
+    computed: computed, isHist: isHist, fcOf: fcOf, acOf: acOf, eff: eff, payOf: payOf, fcPayOf: fcPayOf,
     series: series, forecastCloses: forecastCloses,
     fmt: fmt, wan: wan, yuan0: yuan0, donut: donut
   };
