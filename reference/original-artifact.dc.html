@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&family=Source+Serif+4:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2a2620; --plum:#c96442; --plum2:#7c3a23; --orchid:#dd8a63; --orchid-soft:#f0cdb8;
+    --lilac:#f1ece1; --page:#f0ebe0; --leaf:#6e8348; --rose:#c24433; --gold:#b5862f;
+    --line:#e8e2d4; --muted:#8a8273; --field:#fbf6ee; --field-bd:#e6cdb4;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{ background:var(--page); }
+  .num{ font-family:'IBM Plex Mono',monospace; font-feature-settings:'tnum'; }
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb{ background:#d8cdb8; border-radius:8px; border:2px solid var(--page); }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  input.fld{ font-family:'IBM Plex Mono',monospace; font-feature-settings:'tnum'; }
+  input.fld:focus{ outline:none; border-color:var(--orchid)!important; box-shadow:0 0 0 3px rgba(201,100,66,.15); background:#fff!important; }
+  input.fld::placeholder{ color:#bdb09a; font-style:italic; }
+  .bg-paper{ background-color:var(--page); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23p)' opacity='0.05'/%3E%3C/svg%3E"); }
+  .bg-forest{ background-color:#e9e2d1; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23f)' opacity='0.10'/%3E%3C/svg%3E"); }
+  .bg-fabric{ background-color:#ede5d3; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Cpath d='M0 1H6' stroke='%23ffffff' stroke-opacity='0.32' stroke-width='1'/%3E%3Cpath d='M0 4H6' stroke='%23000000' stroke-opacity='0.04' stroke-width='1'/%3E%3Cpath d='M1 0V6' stroke='%23ffffff' stroke-opacity='0.2' stroke-width='1'/%3E%3Cpath d='M4 0V6' stroke='%23000000' stroke-opacity='0.03' stroke-width='1'/%3E%3C/svg%3E"); background-size:6px 6px; }
+  .bg-cross{ background-color:var(--page); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9'%3E%3Cpath d='M0 9L9 0' stroke='%234a3c26' stroke-opacity='0.11' stroke-width='1'/%3E%3Cpath d='M0 0L9 9' stroke='%234a3c26' stroke-opacity='0.11' stroke-width='1'/%3E%3C/svg%3E"); background-size:9px 9px; }
+  .bg-cloth{ background-color:#75603c; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Cpath d='M0 1H6' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='1'/%3E%3Cpath d='M0 4H6' stroke='%23000000' stroke-opacity='0.17' stroke-width='1'/%3E%3Cpath d='M1 0V6' stroke='%23ffffff' stroke-opacity='0.055' stroke-width='1'/%3E%3Cpath d='M4 0V6' stroke='%23000000' stroke-opacity='0.13' stroke-width='1'/%3E%3C/svg%3E"); background-size:6px 6px; }
+  .chips{ scrollbar-width:none; }
+  .chips::-webkit-scrollbar{ display:none; }
+  main table tbody tr:nth-child(2n){ background:rgba(122,96,60,.045); }
+  .kpi-row > div:first-child{ border-top:3px solid var(--plum); }
+  @media print{
+    .no-print{ display:none!important; }
+    .print-area{ box-shadow:none!important; }
+  }
+</style>
+</helmet>
+<div class="bg-cross" style="min-height:100vh; display:flex; flex-direction:column; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif; color:var(--ink);">
+
+  <!-- ============ TOP NAV ============ -->
+  <header class="no-print bg-fabric" style="display:flex; align-items:center; gap:16px; padding:10px 24px; border-bottom:1px solid #d9cfb9; position:sticky; top:0; z-index:30;">
+    <div style="display:flex; align-items:center; gap:11px; flex:none;">
+      <div style="width:34px; height:34px; border-radius:9px; background:#6e8348; display:flex; align-items:center; justify-content:center; color:#f4f1e6; font-weight:700; font-size:18px; font-family:'Source Serif 4',serif;">兰</div>
+      <div style="line-height:1.18;">
+        <div style="font-weight:700; font-size:13.5px; letter-spacing:.2px; white-space:nowrap;">昆明统一生物科技有限公司</div>
+        <div style="font-size:10.5px; color:var(--muted); letter-spacing:1.5px;">财务分析系统 · v0.29</div>
+      </div>
+    </div>
+    <nav style="display:flex; align-items:center; justify-content:center; gap:2px; flex:1; margin:0 8px; flex-wrap:nowrap; overflow-x:auto;">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="7">
+        <button data-key="{{ n.id }}" onClick="{{ onNav }}" style="display:flex; align-items:center; gap:6px; white-space:nowrap; border:1px solid {{ n.bd }}; cursor:pointer; padding:7px 10px; border-radius:9px; background:{{ n.bg }}; color:{{ n.color }}; font-family:inherit; font-size:12.5px; font-weight:{{ n.weight }};">
+          <span style="font-size:13px;">{{ n.sym }}</span><span>{{ n.label }}</span>
+        </button>
+      </sc-for>
+    </nav>
+    <button onClick="{{ onReset }}" style="flex:none; background:#fbf6ee; border:1px solid var(--line); color:var(--muted); font-size:11.5px; padding:7px 12px; border-radius:8px; cursor:pointer; font-family:inherit;">重置数据</button>
+  </header>
+
+  <!-- ============ MAIN ============ -->
+  <main style="flex:1; min-width:0; display:flex; flex-direction:column;">
+
+    <!-- cloth divider / page header -->
+    <header class="no-print bg-cloth" style="border-bottom:1px solid #564327; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); padding:13px 28px; display:flex; align-items:center; gap:22px;">
+      <div style="flex:none;">
+        <div style="font-size:18px; font-weight:700; letter-spacing:.3px; white-space:nowrap; color:#f7f2e7;">{{ pageTitle }}</div>
+        <div style="font-size:12px; color:#d8cbb0; margin-top:1px; white-space:nowrap;">{{ pageSub }}</div>
+      </div>
+      <div style="flex:1;"></div>
+      <!-- fiscal year config -->
+      <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); border-radius:11px; padding:7px 11px;">
+        <span style="font-size:11px; color:#ece0c8; font-weight:600;">财年</span>
+        <input class="fld" type="date" data-key="startISO" onInput="{{ onConfig }}" value="{{ cfg.startISO }}" style="border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">
+        <span style="color:#ece0c8;">→</span>
+        <input class="fld" type="date" data-key="endISO" onInput="{{ onConfig }}" value="{{ cfg.endISO }}" style="border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">
+        <span style="width:1px; height:20px; background:rgba(255,255,255,.2); margin:0 3px;"></span>
+        <span style="font-size:11px; color:#ece0c8; font-weight:600;">截至</span>
+        <input class="fld" type="date" data-key="asOfISO" onInput="{{ onConfig }}" value="{{ cfg.asOfISO }}" style="border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">
+      </div>
+      <button onClick="{{ onToggleUnit }}" style="background:#f4efe3; color:#5a472b; border:none; border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;">{{ unitLabel }}</button>
+    </header>
+
+    <div style="padding:26px 28px 60px; flex:1;">
+
+      <!-- ============================ DASHBOARD ============================ -->
+      <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <!-- KPI row -->
+        <div class="kpi-row" style="display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:18px;">
+          <sc-for list="{{ dashKpis }}" as="k" hint-placeholder-count="5">
+            <div style="background:#fff; border-radius:15px; padding:16px 17px; box-shadow:0 10px 28px -18px rgba(60,42,28,.4); border:1px solid var(--line);">
+              <div style="font-size:12px; color:var(--muted); margin-bottom:10px;">{{ k.label }}</div>
+              <div class="num" style="font-size:20px; font-weight:600; color:{{ k.color }}; white-space:nowrap;">{{ k.val }}</div>
+              <div style="font-size:11px; color:{{ k.subColor }}; margin-top:6px;">{{ k.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- cash trajectory -->
+        <div style="background:#fff; border-radius:16px; padding:22px 24px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:6px;">
+            <div>
+              <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:18px; font-weight:700;">全年现金轨迹</div>
+              <div style="font-size:12px; color:var(--muted); margin-top:3px;">每周末预计银行余额 · <b style="color:var(--plum);">实线＝实际</b>，<b style="color:var(--orchid);">点线＝预测（贯穿全年）</b> · 悬停查看实际/预测与变差 · <b style="color:{{ varAggColor }};">{{ varAggStr }}</b></div>
+            </div>
+            <div style="display:flex; gap:16px; font-size:12px;">
+              <span style="display:flex; align-items:center; gap:6px;"><span style="width:16px; height:3px; background:var(--plum); border-radius:2px; display:inline-block;"></span>实际</span>
+              <span style="display:flex; align-items:center; gap:6px;"><span style="width:16px; height:0; border-top:3px dashed var(--orchid); display:inline-block;"></span>预测</span>
+            </div>
+          </div>
+          <div style="position:relative;">
+            <svg viewBox="0 0 1000 250" style="width:100%; height:auto; display:block;">
+              <g stroke="var(--line)" stroke-width="1">
+                <line x1="44" y1="40" x2="1000" y2="40"></line>
+                <line x1="44" y1="100" x2="1000" y2="100"></line>
+                <line x1="44" y1="160" x2="1000" y2="160"></line>
+                <line x1="44" y1="220" x2="1000" y2="220"></line>
+              </g>
+              <sc-for list="{{ yTicks }}" as="t" hint-placeholder-count="4">
+                <text x="38" y="{{ t.y }}" text-anchor="end" class="num" style="font-size:10px; fill:var(--muted);">{{ t.label }}</text>
+              </sc-for>
+              <text x="10" y="18" style="font-size:9.5px; fill:var(--muted);">余额/万</text>
+              <path d="{{ trajArea }}" fill="rgba(201,100,66,0.09)"></path>
+              <polyline points="{{ trajForecast }}" fill="none" stroke="var(--orchid)" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round" stroke-linejoin="round"></polyline>
+              <polyline points="{{ trajActual }}" fill="none" stroke="var(--plum)" stroke-width="2.5" stroke-linejoin="round"></polyline>
+              <line x1="{{ asOfX }}" y1="28" x2="{{ asOfX }}" y2="218" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="3 3"></line>
+              <text x="{{ asOfX }}" y="22" text-anchor="middle" style="font-size:10px; fill:var(--gold); font-weight:600;">今天</text>
+              <line id="cashGuide" x1="0" y1="28" x2="0" y2="218" stroke="var(--plum2)" stroke-width="1" stroke-opacity="0.5" style="opacity:0;"></line>
+              <circle id="cashDotF" r="4" fill="#fff" stroke="var(--orchid)" stroke-width="2" style="opacity:0;"></circle>
+              <circle id="cashDotA" r="4" fill="#fff" stroke="var(--plum)" stroke-width="2" style="opacity:0;"></circle>
+              <rect x="44" y="28" width="956" height="190" fill="transparent" style="cursor:crosshair;" onMouseMove="{{ onChartMove }}" onMouseLeave="{{ onChartLeave }}"></rect>
+              <sc-for list="{{ xTicks }}" as="t" hint-placeholder-count="6">
+                <text x="{{ t.x }}" y="244" text-anchor="middle" style="font-size:10px; fill:var(--muted);">{{ t.label }}</text>
+              </sc-for>
+            </svg>
+            <div id="cashTip" style="position:absolute; transform:translate(-50%,-115%); background:#fffdf8; border:1px solid var(--line); border-radius:9px; padding:8px 11px; font-size:11.5px; box-shadow:0 8px 22px -10px rgba(60,42,28,.5); pointer-events:none; opacity:0; white-space:nowrap; z-index:5; min-width:120px;"></div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:18px;">
+          <!-- collections vs payments monthly -->
+          <div style="background:#fff; border-radius:16px; padding:22px 24px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+            <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700; margin-bottom:3px;">月度收款 vs 支出</div>
+            <div style="font-size:12px; color:var(--muted); margin-bottom:16px;">单位：万元</div>
+            <div style="display:flex; align-items:flex-end; gap:10px; height:180px;">
+              <sc-for list="{{ monthBars }}" as="m" hint-placeholder-count="12">
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; height:100%; justify-content:flex-end;">
+                  <div style="display:flex; gap:3px; align-items:flex-end; height:150px;">
+                    <div style="width:9px; background:#5e8c5e; border-radius:3px 3px 0 0; height:{{ m.inH }};"></div>
+                    <div style="width:9px; background:#c75a44; border-radius:3px 3px 0 0; height:{{ m.outH }};"></div>
+                  </div>
+                  <span style="font-size:10px; color:var(--muted);">{{ m.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex; gap:18px; font-size:12px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line);">
+              <span style="display:flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:3px; background:var(--leaf);"></span>收款</span>
+              <span style="display:flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:3px; background:var(--rose);"></span>支出</span>
+            </div>
+          </div>
+          <!-- expense mix + AR -->
+          <div style="display:flex; flex-direction:column; gap:18px;">
+            <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+              <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700; margin-bottom:12px;">全年支出结构</div>
+              <div style="display:flex; align-items:center; gap:16px;">
+                <svg viewBox="0 0 130 130" style="width:122px; height:122px; flex:none;">
+                  <sc-for list="{{ dashDonut }}" as="s" hint-placeholder-count="8">
+                    <path d="{{ s.d }}" fill="{{ s.color }}"></path>
+                  </sc-for>
+                  <circle cx="65" cy="65" r="31" fill="#fff"></circle>
+                  <text x="65" y="61" text-anchor="middle" style="font-size:10px; fill:var(--muted);">合计支出</text>
+                  <text x="65" y="77" text-anchor="middle" class="num" style="font-size:12px; font-weight:600; fill:var(--plum2);">{{ totalPayWan }}</text>
+                </svg>
+                <div style="flex:1;">
+                  <sc-for list="{{ dashDonut }}" as="s" hint-placeholder-count="8">
+                    <div style="display:flex; align-items:center; gap:7px; margin-bottom:5px; font-size:11.5px;">
+                      <span style="width:8px; height:8px; border-radius:2px; background:{{ s.color }}; flex:none;"></span>
+                      <span style="color:#4a4136; flex:1;">{{ s.k }}</span>
+                      <span class="num" style="color:var(--muted);">{{ s.pct }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <div style="background:#c0613f; color:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 14px 34px -18px rgba(60,42,28,.6);">
+              <div style="font-size:13px; color:#ecc6ab;">应收账款合计</div>
+              <div class="num" style="font-size:28px; font-weight:600; margin:6px 0 4px;">{{ arTotalWan }}</div>
+              <div style="font-size:12px; color:#d2bfa6;">{{ arCount }} 位客户 · 预计本周回款 {{ arWeekCollectWan }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============================ HISTORICAL ============================ -->
+      <sc-if value="{{ isHist }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <!-- week selector -->
+        <div style="background:#fff; border-radius:14px; padding:14px 16px; box-shadow:0 8px 24px -18px rgba(60,42,28,.4); border:1px solid var(--line); margin-bottom:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+            <div style="font-size:13px; font-weight:700; color:var(--plum2); white-space:nowrap;">选择周次 · 已发生（实际录入）</div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--muted);">
+              <span style="display:inline-flex; align-items:center; gap:5px;"><span style="width:13px; height:13px; border-radius:4px; background:var(--field); border:1px solid var(--field-bd);"></span>可输入</span>
+              <span style="display:inline-flex; align-items:center; gap:5px;"><span style="width:13px; height:13px; border-radius:4px; background:#f1ede2;"></span>自动计算</span>
+            </div>
+          </div>
+          <div class="chips" style="display:flex; gap:7px; overflow-x:auto; padding-bottom:4px;">
+            <sc-for list="{{ histWeeks }}" as="w" hint-placeholder-count="16">
+              <button data-idx="{{ w.idx }}" onClick="{{ selectWeek }}" style="flex:none; cursor:pointer; border:1px solid {{ w.selBd }}; background:{{ w.selBg }}; color:{{ w.selColor }}; border-radius:10px; padding:7px 12px 8px; font-family:inherit; min-width:90px; box-shadow:{{ w.selShadow }}; transition:box-shadow .12s, background .12s;">
+                <div style="font-size:9px; opacity:.7;">{{ w.month }}</div>
+                <div class="num" style="font-size:12px; font-weight:600;">{{ w.label }}</div>
+                <div class="num" style="font-size:10px; color:{{ w.netColor }};">{{ w.net }}万</div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start;">
+          <!-- SALES -->
+          <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); grid-column:1 / -1;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;">
+              <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700;">销售明细 · {{ selWeekLabel }}</div>
+              <div style="font-size:12px; color:var(--muted);">按渠道 × 规格 · 数量与金额录入，单价自动计算</div>
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead><tr style="color:var(--muted); font-size:11.5px;">
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">渠道 / 规格</th>
+                <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:160px;">数量（株）</th>
+                <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:180px;">金额（元）</th>
+                <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:110px;">平均单价</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ salesRows }}" as="r" hint-placeholder-count="13">
+                  <tr>
+                    <td style="padding:5px 6px; border-bottom:1px solid #f1ebdf;"><span style="font-size:10px; color:var(--orchid); background:var(--lilac); padding:1px 6px; border-radius:5px; margin-right:7px;">{{ r.grp }}</span>{{ r.name }}</td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-map="sales" data-key="{{ r.qtyKey }}" value="{{ r.qty }}" onInput="{{ onEdit }}" placeholder="0" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 8px; font-size:13px;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-map="sales" data-key="{{ r.amtKey }}" value="{{ r.amt }}" onInput="{{ onEdit }}" placeholder="0" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 8px; font-size:13px;"></td>
+                    <td class="num" style="padding:5px 6px; border-bottom:1px solid #f1ebdf; text-align:right; color:var(--muted);">{{ r.price }}</td>
+                  </tr>
+                </sc-for>
+                <tr style="font-weight:700; color:var(--plum2);">
+                  <td style="padding:10px 6px;">合计</td>
+                  <td class="num" style="padding:10px 6px; text-align:right;">{{ salesQstr }}</td>
+                  <td class="num" style="padding:10px 6px; text-align:right;">{{ salesAstr }}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- PURCHASING -->
+          <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+            <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700; margin-bottom:4px;">进货验货</div>
+            <div style="font-size:12px; color:var(--muted); margin-bottom:14px;">本周到货苗 / 花 · 含运费</div>
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead><tr style="color:var(--muted); font-size:11px;">
+                <th style="text-align:left; font-weight:500; padding:6px 4px; border-bottom:1px solid var(--line);">种类</th>
+                <th style="text-align:right; font-weight:500; padding:6px 4px; border-bottom:1px solid var(--line);">数量</th>
+                <th style="text-align:right; font-weight:500; padding:6px 4px; border-bottom:1px solid var(--line);">金额</th>
+                <th style="text-align:right; font-weight:500; padding:6px 4px; border-bottom:1px solid var(--line);">运费</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ purchRows }}" as="r" hint-placeholder-count="7">
+                  <tr>
+                    <td style="padding:4px 4px; border-bottom:1px solid #f1ebdf; font-size:12.5px;">{{ r.name }}</td>
+                    <td style="padding:3px 4px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-map="purch" data-key="{{ r.qtyKey }}" value="{{ r.qty }}" onInput="{{ onEdit }}" placeholder="0" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 6px; font-size:12px;"></td>
+                    <td style="padding:3px 4px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-map="purch" data-key="{{ r.amtKey }}" value="{{ r.amt }}" onInput="{{ onEdit }}" placeholder="0" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 6px; font-size:12px;"></td>
+                    <td style="padding:3px 4px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-map="purch" data-key="{{ r.frtKey }}" value="{{ r.frt }}" onInput="{{ onEdit }}" placeholder="0" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 6px; font-size:12px;"></td>
+                  </tr>
+                </sc-for>
+                <tr style="font-weight:700; color:var(--plum2);"><td colspan="3" style="padding:10px 4px;">进货合计（含运费）</td><td class="num" style="padding:10px 4px; text-align:right;">{{ purchAstr }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- CASH ACTUALS -->
+          <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+            <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700; margin-bottom:4px;">现金流实际</div>
+            <div style="font-size:12px; color:var(--muted); margin-bottom:14px;">把当周预测改为实际（元）· 灰字为原预测值 · 右侧为偏差</div>
+            <div style="font-size:11px; color:var(--leaf); font-weight:700; margin:4px 0 8px;">收款</div>
+            <sc-for list="{{ histReceiptRows }}" as="c" hint-placeholder-count="2">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:7px;">
+                <span style="flex:1; font-size:13px;">{{ c.label }}</span>
+                <input class="fld" inputmode="numeric" data-map="actual" data-key="{{ c.key }}" value="{{ c.val }}" onInput="{{ onEdit }}" placeholder="{{ c.ph }}" style="width:138px; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 9px; font-size:13px;">
+                <span class="num" style="width:52px; text-align:right; font-size:11.5px; color:{{ c.varColor }};">{{ c.varPct }}</span>
+              </div>
+            </sc-for>
+            <div style="font-size:11px; color:var(--rose); font-weight:700; margin:14px 0 8px;">付款</div>
+            <sc-for list="{{ histPayRows }}" as="c" hint-placeholder-count="9">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:7px;">
+                <span style="flex:1; font-size:13px;">{{ c.label }}</span>
+                <input class="fld" inputmode="numeric" data-map="actual" data-key="{{ c.key }}" value="{{ c.val }}" onInput="{{ onEdit }}" placeholder="{{ c.ph }}" style="width:138px; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 9px; font-size:13px;">
+                <span class="num" style="width:52px; text-align:right; font-size:11.5px; color:{{ c.varColor }};">{{ c.varPct }}</span>
+              </div>
+            </sc-for>
+            <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid var(--line);">
+              <div><div style="font-size:11px; color:var(--muted);">实际净额</div><div class="num" style="font-size:15px; font-weight:600; color:{{ selNetColor }};">{{ selNet }}</div></div>
+              <div style="text-align:center;"><div style="font-size:11px; color:var(--muted);">原预测净额</div><div class="num" style="font-size:15px; font-weight:600; color:var(--muted);">{{ selFcNetWan }}</div></div>
+              <div style="text-align:right;"><div style="font-size:11px; color:var(--muted);">净额偏差</div><div class="num" style="font-size:15px; font-weight:700; color:{{ selVarColor }};">{{ selVarStr }}</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============================ FORECAST ============================ -->
+      <sc-if value="{{ isFcst }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="background:#fff; border-radius:14px; padding:14px 16px; box-shadow:0 8px 24px -18px rgba(60,42,28,.4); border:1px solid var(--line); margin-bottom:16px;">
+          <div style="font-size:13px; font-weight:700; color:var(--plum2); margin-bottom:10px; white-space:nowrap;">选择预测周次 · 默认由假设自动生成，可逐项覆盖</div>
+          <div class="chips" style="display:flex; gap:7px; overflow-x:auto; padding-bottom:4px;">
+            <sc-for list="{{ fcstWeeks }}" as="w" hint-placeholder-count="20">
+              <button data-idx="{{ w.idx }}" onClick="{{ selectWeek }}" style="flex:none; cursor:pointer; border:1px solid {{ w.selBd }}; background:{{ w.selBg }}; color:{{ w.selColor }}; border-radius:10px; padding:7px 12px 8px; font-family:inherit; min-width:90px; box-shadow:{{ w.selShadow }}; transition:box-shadow .12s, background .12s;">
+                <div style="font-size:9px; opacity:.7;">{{ w.month }}</div>
+                <div class="num" style="font-size:12px; font-weight:600;">{{ w.label }}</div>
+                <div class="num" style="font-size:10px; color:{{ w.netColor }};">{{ w.net }}万</div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:380px 1fr; gap:16px; align-items:start;">
+          <!-- override panel -->
+          <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+            <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700;">{{ selWeekLabel }} 预测</div>
+            <div style="font-size:12px; color:var(--muted); margin:3px 0 14px;">留空＝采用该周假设值（灰色提示）· 填写＝手动覆盖</div>
+            <div style="font-size:11px; color:var(--leaf); font-weight:700; margin:4px 0 8px;">收款</div>
+            <sc-for list="{{ fcstReceiptRows }}" as="c" hint-placeholder-count="2">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:7px;">
+                <span style="flex:1; font-size:13px;">{{ c.label }}</span>
+                <input class="fld" inputmode="numeric" data-map="fcst" data-key="{{ c.key }}" value="{{ c.val }}" onInput="{{ onEdit }}" placeholder="{{ c.ph }}" style="width:150px; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 9px; font-size:13px;">
+              </div>
+            </sc-for>
+            <div style="font-size:11px; color:var(--rose); font-weight:700; margin:14px 0 8px;">付款</div>
+            <sc-for list="{{ fcstPayRows }}" as="c" hint-placeholder-count="9">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:7px;">
+                <span style="flex:1; font-size:13px;">{{ c.label }}</span>
+                <input class="fld" inputmode="numeric" data-map="fcst" data-key="{{ c.key }}" value="{{ c.val }}" onInput="{{ onEdit }}" placeholder="{{ c.ph }}" style="width:150px; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 9px; font-size:13px;">
+              </div>
+            </sc-for>
+            <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; color:var(--muted);">本周末预计余额</span>
+              <span class="num" style="font-size:18px; font-weight:700; color:var(--plum);">{{ selCloseWan }}</span>
+            </div>
+          </div>
+          <!-- upcoming table -->
+          <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+            <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700; margin-bottom:14px;">未来 9 周现金流（万元）</div>
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead><tr style="color:var(--muted); font-size:11.5px; text-align:right;">
+                <th style="text-align:left; font-weight:500; padding:8px 6px; border-bottom:1px solid var(--line);">周次</th>
+                <th style="font-weight:500; padding:8px 6px; border-bottom:1px solid var(--line);">类型</th>
+                <th style="font-weight:500; padding:8px 6px; border-bottom:1px solid var(--line);">收款</th>
+                <th style="font-weight:500; padding:8px 6px; border-bottom:1px solid var(--line);">支出</th>
+                <th style="font-weight:500; padding:8px 6px; border-bottom:1px solid var(--line);">净额</th>
+                <th style="font-weight:500; padding:8px 6px; border-bottom:1px solid var(--line);">周末余额</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ upcoming }}" as="m" hint-placeholder-count="9">
+                  <tr style="text-align:right; background:{{ m.rowBg }};">
+                    <td style="text-align:left; padding:8px 6px; border-bottom:1px solid #f1ebdf; font-weight:600;">{{ m.label }}</td>
+                    <td style="padding:8px 6px; border-bottom:1px solid #f1ebdf;"><span style="font-size:10px; color:{{ m.tagColor }};">{{ m.tag }}</span></td>
+                    <td class="num" style="padding:8px 6px; border-bottom:1px solid #f1ebdf; color:var(--leaf);">{{ m.cin }}</td>
+                    <td class="num" style="padding:8px 6px; border-bottom:1px solid #f1ebdf; color:var(--rose);">{{ m.pays }}</td>
+                    <td class="num" style="padding:8px 6px; border-bottom:1px solid #f1ebdf; color:{{ m.netColor }};">{{ m.net }}</td>
+                    <td class="num" style="padding:8px 6px; border-bottom:1px solid #f1ebdf; font-weight:600;">{{ m.close }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <div style="font-size:11.5px; color:var(--muted); margin-top:12px;">提示：预测金额由「假设」页的命名因子驱动（单价、回款率、销量、淘汰率、成本、租金计划等）。修改对应周的假设，此处实时更新。</div>
+          </div>
+        </div>
+        <!-- revenue breakdown -->
+        <div style="background:#fff; border-radius:16px; padding:20px 24px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700;">收款测算 · {{ selWeekLabel }}（每周 · 元）</div>
+            <span style="font-size:11.5px; color:var(--gold); background:#f6edda; padding:4px 10px; border-radius:7px;">已扣除预测淘汰率 {{ revBreak.defect }}</span>
+          </div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:16px;">数量 × 单价 → 国外 / 国内 收款（国内再乘回款率 {{ revBreak.collectRate }}）</div>
+          <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:22px;">
+            <!-- foreign -->
+            <div>
+              <div style="font-size:13px; font-weight:700; color:var(--gold); margin-bottom:10px;">国外收款</div>
+              <sc-for list="{{ revBreakForeign }}" as="r" hint-placeholder-count="2">
+                <div style="display:flex; align-items:center; gap:8px; font-size:12.5px; margin-bottom:8px;">
+                  <span style="flex:1; color:#4a4136;">{{ r.label }}</span>
+                  <span class="num" style="color:var(--muted);">{{ r.qty }} 株 × {{ r.price }}</span>
+                  <span class="num" style="width:80px; text-align:right; font-weight:600;">{{ r.amt }}</span>
+                </div>
+              </sc-for>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+                <span style="font-size:13px; font-weight:700;">国外收款合计</span>
+                <span class="num" style="font-size:16px; font-weight:700; color:var(--gold);">{{ revBreak.foreignTotal }}</span>
+              </div>
+            </div>
+            <!-- domestic -->
+            <div>
+              <div style="font-size:13px; font-weight:700; color:var(--plum); margin-bottom:10px;">国内收款</div>
+              <sc-for list="{{ revBreakDom }}" as="r" hint-placeholder-count="4">
+                <div style="display:flex; align-items:center; gap:8px; font-size:12.5px; margin-bottom:8px;">
+                  <span style="flex:1; color:#4a4136;">{{ r.label }}</span>
+                  <span class="num" style="color:var(--muted);">{{ r.qty }} 株 × {{ r.price }}</span>
+                  <span class="num" style="width:80px; text-align:right; font-weight:600;">{{ r.amt }}</span>
+                </div>
+              </sc-for>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted);">
+                <span>国内毛收入小计</span><span class="num">{{ revBreak.domGross }}</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;">
+                <span>× 回款率 {{ revBreak.collectRate }}</span><span></span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:10px; border-top:1px solid var(--line);">
+                <span style="font-size:13px; font-weight:700;">国内收款合计</span>
+                <span class="num" style="font-size:16px; font-weight:700; color:var(--plum);">{{ revBreak.domesticTotal }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============================ 苗款 PAYABLES ============================ -->
+      <sc-if value="{{ isSeedpay }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:14px; margin-bottom:16px;">
+          <div style="background:#c0613f; color:#fff; border-radius:15px; padding:18px 20px;">
+            <div style="font-size:13px; color:#ecc6ab;">应付苗款合计</div>
+            <div class="num" style="font-size:27px; font-weight:600; margin-top:6px;">{{ seedTotal }}</div>
+          </div>
+          <div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+            <div style="font-size:13px; color:var(--muted);">30 天内到期</div>
+            <div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--gold);">{{ seedSoon }}</div>
+          </div>
+          <div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); display:flex; align-items:center;">
+            <div style="font-size:11.5px; color:var(--muted); line-height:1.6;">付款日期落在某周的苗款，将自动计入<b style="color:var(--plum);">该周预测的「苗款」支出</b>。</div>
+          </div>
+        </div>
+        <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div><div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700;">应付苗款登记</div><div style="font-size:12px; color:var(--muted);">供应商 · 规格 · 数量 · 单价 · 付款日期 · 紧急度</div></div>
+            <button data-arr="seedPayables" onClick="{{ addRow }}" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;">+ 新增项目</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="border-collapse:collapse; font-size:12.5px; min-width:920px; width:100%;">
+              <thead><tr style="color:var(--muted); font-size:11px;">
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:150px;">供应商</th>
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:120px;">规格</th>
+                <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:92px;">数量(株)</th>
+                <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:74px;">单价(元)</th>
+                <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:96px;">金额</th>
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:140px;">付款日期</th>
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:84px;">紧急度</th>
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:78px;">状态</th>
+                <th style="width:30px; border-bottom:1px solid var(--line);"></th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ seedRows }}" as="r" hint-placeholder-count="6">
+                  <tr>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" data-arr="seedPayables" data-idx="{{ r.idx }}" data-key="supplier" value="{{ r.supplier }}" onInput="{{ onEditArr }}" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:12.5px; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" data-arr="seedPayables" data-idx="{{ r.idx }}" data-key="spec" value="{{ r.spec }}" onInput="{{ onEditArr }}" placeholder="如 2.8寸成熟苗" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:12px; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-arr="seedPayables" data-idx="{{ r.idx }}" data-key="qty" value="{{ r.qty }}" onInput="{{ onEditArr }}" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 6px; font-size:12.5px;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="decimal" data-arr="seedPayables" data-idx="{{ r.idx }}" data-key="price" value="{{ r.price }}" onInput="{{ onEditArr }}" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 6px; font-size:12.5px;"></td>
+                    <td class="num" style="padding:4px 6px; border-bottom:1px solid #f1ebdf; text-align:right; font-weight:600; color:var(--plum2);">{{ r.amt }}</td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" type="date" data-arr="seedPayables" data-idx="{{ r.idx }}" data-key="payby" value="{{ r.payby }}" onInput="{{ onEditArr }}" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 6px; font-size:11.5px; color:var(--ink);"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;">
+                      <select data-arr="seedPayables" data-idx="{{ r.idx }}" data-key="urgency" value="{{ r.urgency }}" onChange="{{ onEditArr }}" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 4px; font-size:12px; color:var(--ink); font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;">
+                        <sc-for list="{{ urgencyOptions }}" as="u" hint-placeholder-count="4"><option value="{{ u }}">{{ u }}</option></sc-for>
+                      </select>
+                    </td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><span style="font-size:11px; color:{{ r.statusColor }}; font-weight:600;">{{ r.statusText }}</span></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf; text-align:center;"><button data-arr="seedPayables" data-idx="{{ r.idx }}" onClick="{{ delRow }}" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:15px; opacity:.6;">×</button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============================ ASSUMPTIONS ============================ -->
+      <sc-if value="{{ isAssume }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <!-- per-week banner -->
+        <div style="background:#fff; border-radius:14px; padding:14px 16px; box-shadow:0 8px 24px -18px rgba(60,42,28,.4); border:1px solid var(--line); margin-bottom:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <div style="font-size:13px; font-weight:700; color:var(--plum2);">选择周次 · 各周假设独立，留空＝继承上一周</div>
+            <div style="font-size:11.5px; color:var(--muted);">正在编辑：<b style="color:var(--plum);">{{ selWeekLabel }}</b> 的假设</div>
+          </div>
+          <div class="chips" style="display:flex; gap:7px; overflow-x:auto; padding-bottom:4px;">
+            <sc-for list="{{ allWeeks }}" as="w" hint-placeholder-count="20">
+              <button data-idx="{{ w.idx }}" onClick="{{ selectWeek }}" style="flex:none; cursor:pointer; border:1px solid {{ w.selBd }}; background:{{ w.selBg }}; color:{{ w.selColor }}; border-radius:10px; padding:7px 11px 8px; font-family:inherit; min-width:86px; box-shadow:{{ w.selShadow }}; transition:box-shadow .12s, background .12s;">
+                <div style="font-size:9px; opacity:.7;">{{ w.month }}</div>
+                <div class="num" style="font-size:12px; font-weight:600;">{{ w.label }}</div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px; align-items:start;">
+          <sc-for list="{{ assumeGroups }}" as="g" hint-placeholder-count="6">
+            <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+                <span style="width:30px; height:30px; border-radius:9px; background:var(--lilac); color:var(--plum); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;">{{ g.sym }}</span>
+                <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:16px; font-weight:700; flex:1;">{{ g.title }}</div>
+                <button data-group="{{ g.gid }}" onClick="{{ addAssumeItem }}" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer; font-family:inherit;">+ 新增项目</button>
+              </div>
+              <div style="font-size:12px; color:var(--muted); margin:0 0 14px 40px;">{{ g.desc }}</div>
+              <sc-for list="{{ g.fields }}" as="f" hint-placeholder-count="4">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:9px;">
+                  <div style="flex:1;">
+                    <div style="font-size:13px;">{{ f.label }} <span style="font-size:10px; color:#fff; background:{{ f.badgeColor }}; padding:1px 6px; border-radius:5px; margin-left:4px;">{{ f.badge }}</span></div>
+                    <div style="font-size:10.5px; color:var(--muted);">{{ f.hint }}</div>
+                  </div>
+                  <input class="fld" inputmode="decimal" data-map="assumeWeek" data-key="{{ f.key }}" value="{{ f.val }}" onInput="{{ onEditAssume }}" placeholder="{{ f.ph }}" style="width:128px; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:7px 9px; font-size:13.5px; font-weight:600;">
+                  <span style="font-size:11px; color:var(--muted); width:42px;">{{ f.unit }}</span>
+                </div>
+              </sc-for>
+              <sc-for list="{{ g.custom }}" as="f" hint-placeholder-count="0">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px; padding-top:9px; border-top:1px dashed var(--line);">
+                  <input class="fld" data-arr="customItems" data-idx="{{ f.custIdx }}" data-key="name" value="{{ f.name }}" onInput="{{ onEditArr }}" style="flex:1; min-width:0; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 8px; font-size:12.5px; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;">
+                  <input class="fld" inputmode="decimal" data-map="assumeWeek" data-key="{{ f.key }}" value="{{ f.val }}" onInput="{{ onEditAssume }}" placeholder="{{ f.ph }}" style="width:100px; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 8px; font-size:13px; font-weight:600;">
+                  <input class="fld" data-arr="customItems" data-idx="{{ f.custIdx }}" data-key="unit" value="{{ f.unit }}" onInput="{{ onEditArr }}" style="width:48px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 4px; font-size:10.5px; text-align:center; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;">
+                  <button data-id="{{ f.id }}" onClick="{{ delCustom }}" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:15px; opacity:.6;">×</button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+
+          <!-- RENT SCHEDULE -->
+          <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); grid-column:1 / -1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <div><div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:16px; font-weight:700;">租金计划 · 按基地</div><div style="font-size:12px; color:var(--muted);">每处基地的租金、金额与到期月份（逗号分隔，如 5,11 表示 5 月与 11 月各付一次）</div></div>
+              <button data-arr="rents" onClick="{{ addRow }}" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;">+ 新增基地</button>
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead><tr style="color:var(--muted); font-size:11.5px;">
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">基地 / 项目</th>
+                <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:180px;">每次金额（元）</th>
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:150px;">到期月份</th>
+                <th style="width:40px; border-bottom:1px solid var(--line);"></th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ rents }}" as="r" hint-placeholder-count="6">
+                  <tr>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" data-arr="rents" data-idx="{{ $index }}" data-key="name" value="{{ r.name }}" onInput="{{ onEditArr }}" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-arr="rents" data-idx="{{ $index }}" data-key="amount" value="{{ r.amount }}" onInput="{{ onEditArr }}" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" data-arr="rents" data-idx="{{ $index }}" data-key="months" value="{{ r.months }}" onInput="{{ onEditArr }}" placeholder="如 5,11" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf; text-align:center;"><button data-arr="rents" data-idx="{{ $index }}" onClick="{{ delRow }}" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:16px; opacity:.6;">×</button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- FIXED PAYMENTS -->
+          <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); grid-column:1 / -1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <div><div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:16px; font-weight:700;">固定支出与保险</div><div style="font-size:12px; color:var(--muted);">房贷、车辆/人寿/出口保险、软件与专利年费等长期固定支付</div></div>
+              <button data-arr="fixed" onClick="{{ addRow }}" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;">+ 新增条目</button>
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead><tr style="color:var(--muted); font-size:11.5px;">
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">项目</th>
+                <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:180px;">每次金额（元）</th>
+                <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:150px;">到期月份</th>
+                <th style="width:40px; border-bottom:1px solid var(--line);"></th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ fixed }}" as="r" hint-placeholder-count="5">
+                  <tr>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" data-arr="fixed" data-idx="{{ $index }}" data-key="name" value="{{ r.name }}" onInput="{{ onEditArr }}" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-arr="fixed" data-idx="{{ $index }}" data-key="amount" value="{{ r.amount }}" onInput="{{ onEditArr }}" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" data-arr="fixed" data-idx="{{ $index }}" data-key="months" value="{{ r.months }}" onInput="{{ onEditArr }}" placeholder="如 1,4,7,10" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px;"></td>
+                    <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf; text-align:center;"><button data-arr="fixed" data-idx="{{ $index }}" onClick="{{ delRow }}" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:16px; opacity:.6;">×</button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============================ RECEIVABLES ============================ -->
+      <sc-if value="{{ isAr }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="background:#fff; border-radius:14px; padding:14px 16px; box-shadow:0 8px 24px -18px rgba(60,42,28,.4); border:1px solid var(--line); margin-bottom:16px;">
+          <div style="font-size:13px; font-weight:700; color:var(--plum2); margin-bottom:10px; white-space:nowrap;">选择周次 · 每位客户的本周预计回款</div>
+          <div class="chips" style="display:flex; gap:7px; overflow-x:auto; padding-bottom:4px;">
+            <sc-for list="{{ allWeeks }}" as="w" hint-placeholder-count="20">
+              <button data-idx="{{ w.idx }}" onClick="{{ selectWeek }}" style="flex:none; cursor:pointer; border:1px solid {{ w.selBd }}; background:{{ w.selBg }}; color:{{ w.selColor }}; border-radius:10px; padding:7px 11px 8px; font-family:inherit; min-width:86px; box-shadow:{{ w.selShadow }}; transition:box-shadow .12s, background .12s;">
+                <div style="font-size:9px; opacity:.7;">{{ w.month }}</div>
+                <div class="num" style="font-size:12px; font-weight:600;">{{ w.label }}</div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <!-- KPI row -->
+        <div style="display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:14px; margin-bottom:16px;">
+          <div style="background:#c0613f; color:#fff; border-radius:15px; padding:18px 20px;">
+            <div style="font-size:13px; color:#ecc6ab;">应收账款合计</div>
+            <div class="num" style="font-size:27px; font-weight:600; margin-top:6px;">{{ arOutWan }}</div>
+          </div>
+          <div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+            <div style="font-size:13px; color:var(--muted);">本周预计回款 · {{ selWeekLabel }}</div>
+            <div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--leaf);">{{ arColWan }}</div>
+          </div>
+          <div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);">
+            <div style="font-size:13px; color:var(--muted);">客户数</div>
+            <div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--plum2);">{{ arCount }} <span style="font-size:13px; color:var(--muted);">位</span></div>
+          </div>
+        </div>
+        <!-- category summary -->
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;">
+          <sc-for list="{{ catSummary }}" as="c" hint-placeholder-count="4">
+            <div style="background:#fff; border-radius:13px; padding:12px 15px; box-shadow:0 8px 22px -18px rgba(60,42,28,.4); border:1px solid var(--line); border-left:4px solid {{ c.color }};">
+              <div style="font-size:12px; color:var(--muted);">{{ c.cat }}</div>
+              <div class="num" style="font-size:18px; font-weight:600; margin-top:4px; color:var(--plum2);">{{ c.val }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <!-- full-width table -->
+        <div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div><div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:17px; font-weight:700;">客户应收账款</div><div style="font-size:12px; color:var(--muted);">{{ selWeekLabel }} · 应收余额与本周预计回款（元）</div></div>
+            <button data-arr="customers" onClick="{{ addRow }}" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;">+ 新增客户</button>
+          </div>
+          <table style="width:100%; border-collapse:collapse; font-size:12.5px; table-layout:fixed;">
+            <thead><tr style="color:var(--muted); font-size:11px;">
+              <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:150px;">客户名称</th>
+              <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:82px;">分类</th>
+              <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:84px;">备注</th>
+              <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:110px;">应收余额（元）</th>
+              <th style="text-align:right; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line); width:116px;">本周预计回款</th>
+              <th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">应收占比</th>
+              <th style="width:30px; border-bottom:1px solid var(--line);"></th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ custRows }}" as="c" hint-placeholder-count="6">
+                <tr>
+                  <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" data-arr="customers" data-idx="{{ c.idx }}" data-key="name" value="{{ c.name }}" onInput="{{ onEditArr }}" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;"></td>
+                  <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><select data-arr="customers" data-idx="{{ c.idx }}" data-key="cat" value="{{ c.cat }}" onChange="{{ onEditArr }}" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 4px; font-size:11.5px; color:{{ c.catColor }}; font-weight:600; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;"><sc-for list="{{ catOptions }}" as="o" hint-placeholder-count="4"><option value="{{ o }}">{{ o }}</option></sc-for></select></td>
+                  <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" data-arr="customers" data-idx="{{ c.idx }}" data-key="note" value="{{ c.note }}" onInput="{{ onEditArr }}" placeholder="—" style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:12px; font-family:'Hanken Grotesk','Noto Sans SC',sans-serif;"></td>
+                  <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-arr="customers" data-idx="{{ c.idx }}" data-key="outstanding" value="{{ c.outstanding }}" onInput="{{ onEditArr }}" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px;"></td>
+                  <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><input class="fld" inputmode="numeric" data-map="collect" data-key="{{ c.collectKey }}" value="{{ c.collect }}" onInput="{{ onEditCollect }}" placeholder="0" style="width:100%; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:6px 8px; font-size:13px;"></td>
+                  <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf;"><div style="height:8px; background:#ece4d6; border-radius:4px; overflow:hidden;"><div style="height:100%; width:{{ c.barW }}; background:var(--plum); border-radius:4px;"></div></div></td>
+                  <td style="padding:4px 6px; border-bottom:1px solid #f1ebdf; text-align:center;"><button data-arr="customers" data-idx="{{ c.idx }}" onClick="{{ delRow }}" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:16px; opacity:.6;">×</button></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <div style="font-size:11.5px; color:var(--muted); margin-top:12px;">提示：「本周预计回款」按所选周次记录，是预测页国内收款的重要来源；切换上方周次可分别录入每周的预计回款。</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============================ REPORT ============================ -->
+      <sc-if value="{{ isReport }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div class="no-print" style="display:flex; justify-content:flex-end; margin-bottom:14px;">
+          <button onClick="{{ doPrint }}" style="background:var(--plum); color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">打印 / 导出 PDF</button>
+        </div>
+        <div class="print-area" style="background:#fff; border-radius:16px; padding:42px 48px; box-shadow:0 14px 40px -24px rgba(60,42,28,.45); border:1px solid var(--line); max-width:920px; margin:0 auto;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid var(--plum); padding-bottom:18px; margin-bottom:24px;">
+            <div>
+              <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:23px; font-weight:900; color:var(--plum2); white-space:nowrap;">{{ repCompany }} · 财务预测报告</div>
+              <div style="font-size:13px; color:var(--muted); margin-top:6px;">财年 {{ repFy }}</div>
+            </div>
+            <div style="width:46px; height:46px; border-radius:13px; background:#6e8348; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:22px;">兰</div>
+          </div>
+
+          <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">关键指标</div>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px;">
+            <sc-for list="{{ repKpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:var(--lilac); border-radius:12px; padding:15px 16px;">
+                <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">{{ k.label }}</div>
+                <div class="num" style="font-size:17px; font-weight:700; color:{{ k.color }}; white-space:nowrap;">{{ k.val }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">情况说明</div>
+          <div style="margin-bottom:28px;">
+            <sc-for list="{{ repLines }}" as="line" hint-placeholder-count="4">
+              <div style="display:flex; gap:10px; margin-bottom:11px; font-size:14px; line-height:1.6;">
+                <span style="width:7px; height:7px; border-radius:50%; background:var(--orchid); margin-top:8px; flex:none;"></span>
+                <span style="color:#3a342a;">{{ line }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-family:'Source Serif 4','Noto Serif SC',serif; font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">全年现金轨迹</div>
+          <svg viewBox="0 0 1000 250" style="width:100%; height:auto; display:block; margin-bottom:10px;">
+            <g stroke="var(--line)" stroke-width="1">
+              <line x1="40" y1="40" x2="1000" y2="40"></line><line x1="40" y1="100" x2="1000" y2="100"></line><line x1="40" y1="160" x2="1000" y2="160"></line><line x1="40" y1="220" x2="1000" y2="220"></line>
+            </g>
+            <sc-for list="{{ yTicks }}" as="t" hint-placeholder-count="4"><text x="34" y="{{ t.y }}" text-anchor="end" class="num" style="font-size:10px; fill:var(--muted);">{{ t.label }}</text></sc-for>
+            <path d="{{ trajArea }}" fill="rgba(201,100,66,0.10)"></path>
+            <polyline points="{{ trajActual }}" fill="none" stroke="var(--plum)" stroke-width="2.5" stroke-linejoin="round"></polyline>
+            <polyline points="{{ trajForecast }}" fill="none" stroke="var(--orchid)" stroke-width="2.5" stroke-dasharray="6 5" stroke-linejoin="round"></polyline>
+            <defs><linearGradient id="tgr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dd8a63" stop-opacity="0.28"></stop><stop offset="1" stop-color="#dd8a63" stop-opacity="0"></stop></linearGradient></defs>
+            <sc-for list="{{ xTicks }}" as="t" hint-placeholder-count="6"><text x="{{ t.x }}" y="246" text-anchor="middle" style="font-size:10px; fill:var(--muted);">{{ t.label }}</text></sc-for>
+          </svg>
+          <div style="font-size:11px; color:var(--muted); border-top:1px solid var(--line); padding-top:14px; margin-top:20px;">本报告由兰圃财务预测系统自动生成 · 实线为实际、虚线为预测 · 单位 {{ unitLabel }}</div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.KEY = 'orchidFinance.v2';
+    this.state = this.load();
+    this.onNav = (e) => this.setState({ page: e.currentTarget.dataset.key });
+    this.onConfig = (e) => this.edit('config', e.target.dataset.key, e.target.value);
+    this.onEdit = (e) => this.edit(e.target.dataset.map, e.target.dataset.key, e.target.value);
+    this.onEditArr = (e) => this.editArr(e.target.dataset.arr, +e.target.dataset.idx, e.target.dataset.key, e.target.value);
+    this.onToggleUnit = () => this.edit('config', 'unit', this.state.config.unit === '万' ? '元' : '万');
+    this.onReset = () => { if (confirm('确定重置所有数据？此操作不可撤销。')) { localStorage.removeItem(this.KEY); this.setState(this.defaultModel()); } };
+    this.selectWeek = (e) => this.setState({ weekIdx: +e.currentTarget.dataset.idx });
+    this.onEditCollect = (e) => this.edit('collect', e.target.dataset.key, e.target.value);
+    this.addRow = (e) => { const arr = e.currentTarget.dataset.arr; const tmpl = arr === 'customers' ? { name: '新客户', outstanding: '0', note: '', cat: '国内' } : arr === 'seedPayables' ? { supplier: '新供应商', spec: '', qty: '0', price: '0', payby: '', urgency: '三级', note: '' } : { name: '新条目', amount: '0', months: '' }; this.setState(s => ({ [arr]: [...s[arr], tmpl] })); };
+    this.delRow = (e) => { const a = e.currentTarget.dataset.arr, i = +e.currentTarget.dataset.idx; this.setState(s => ({ [a]: s[a].filter((_, k) => k !== i) })); };
+    this.doPrint = () => window.print();
+    this.onChartMove = (e) => {
+      const svg = e.target.ownerSVGElement; const h = this._hov; if (!svg || !h) return;
+      const m = svg.getScreenCTM(); if (!m) return;
+      const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+      const loc = p.matrixTransform(m.inverse());
+      let bi = 0, bd = 1e9; for (let i = 0; i < h.xs.length; i++) { const d = Math.abs(h.xs[i] - loc.x); if (d < bd) { bd = d; bi = i; } }
+      const g = document.getElementById('cashGuide'); if (g) { g.setAttribute('x1', h.xs[bi]); g.setAttribute('x2', h.xs[bi]); g.style.opacity = 1; }
+      const df = document.getElementById('cashDotF'); if (df) { df.setAttribute('cx', h.xs[bi]); df.setAttribute('cy', h.yf[bi]); df.style.opacity = 1; }
+      const da = document.getElementById('cashDotA'); const hasA = h.ya[bi] != null;
+      if (da) { if (hasA) { da.setAttribute('cx', h.xs[bi]); da.setAttribute('cy', h.ya[bi]); da.style.opacity = 1; } else { da.style.opacity = 0; } }
+      const tip = document.getElementById('cashTip');
+      if (tip) {
+        tip.style.opacity = 1;
+        tip.style.left = (h.xs[bi] / 1000 * 100) + '%';
+        tip.style.top = ((hasA ? Math.min(h.yf[bi], h.ya[bi]) : h.yf[bi]) / 250 * 100) + '%';
+        tip.innerHTML = '<div style="font-weight:700;margin-bottom:4px;color:#2a2620">' + h.lab[bi] + '</div>' +
+          '<div style="display:flex;gap:10px;justify-content:space-between"><span style="color:#c2613c">预测</span><span class="num">' + h.fcStr[bi] + '</span></div>' +
+          (hasA ? '<div style="display:flex;gap:10px;justify-content:space-between"><span style="color:#46552c">实际</span><span class="num">' + h.acStr[bi] + '</span></div><div style="display:flex;gap:10px;justify-content:space-between"><span style="color:' + h.varCol[bi] + '">变差</span><span class="num" style="color:' + h.varCol[bi] + '">' + h.varStr[bi] + '</span></div>' : '<div style="color:#8a8273">尚未发生</div>');
+      }
+    };
+    this.onChartLeave = () => { ['cashGuide', 'cashDotF', 'cashDotA', 'cashTip'].forEach(id => { const el = document.getElementById(id); if (el) el.style.opacity = 0; }); };
+    // per-week assumption override: data-key = `${weekIdx}:${id}`
+    this.onEditAssume = (e) => this.edit('assumeWeek', e.target.dataset.key, e.target.value);
+    this.addAssumeItem = (e) => {
+      const group = e.currentTarget.dataset.group;
+      const expense = ['seed', 'material', 'opex'].includes(group);
+      const id = 'c_' + Math.random().toString(36).slice(2, 8);
+      const unit = group === 'price' ? '元/株' : group === 'collect' ? '比例' : group === 'volume' ? '株/月' : expense ? '元/月' : '';
+      this.setState(s => ({ customItems: [...s.customItems, { id, group, name: '新项目', unit, kind: expense ? 'monthlyExpense' : 'reference' }] }));
+    };
+    this.delCustom = (e) => { const id = e.currentTarget.dataset.id; this.setState(s => ({ customItems: s.customItems.filter(x => x.id !== id) })); };
+  }
+
+  SALESCATS = [
+    { id: 'mp', name: '苗', grp: '苗' },
+    { id: 'fx28', name: '国外 2.8/3寸', grp: '国外' }, { id: 'fx35', name: '国外 3.5寸', grp: '国外' },
+    { id: 'xj28', name: '小街 2.8/3寸', grp: '国内' }, { id: 'xj35', name: '小街 3.5寸', grp: '国内' },
+    { id: 'dn28', name: '斗南 2.8/3寸', grp: '国内' }, { id: 'dn35', name: '斗南 3.5/3.8寸', grp: '国内' },
+    { id: 'ys28', name: '砚山 2.8/3寸', grp: '国内' }, { id: 'ys35', name: '砚山 3.5/3.8寸', grp: '国内' },
+    { id: 'dye28', name: '染色花 2.8寸', grp: '染色' }, { id: 'dye30', name: '染色花 3.0寸', grp: '染色' }, { id: 'dye35', name: '染色花 3.5/3.8寸', grp: '染色' },
+    { id: 'cut', name: '切花', grp: '切花' }
+  ];
+  PURCHCATS = [
+    { id: 'pmsmall', name: '小苗' }, { id: 'pmmed', name: '中苗' }, { id: 'pmlarge', name: '大苗' },
+    { id: 'pcmed', name: '代养中苗' }, { id: 'pclarge', name: '代养大苗' },
+    { id: 'pflwsmall', name: '小花' }, { id: 'pflwlarge', name: '大花' }
+  ];
+
+  // ---------- persistence ----------
+  load() {
+    try { const s = localStorage.getItem(this.KEY); if (s) return { ...this.defaultModel(), ...JSON.parse(s) }; } catch (e) {}
+    return this.defaultModel();
+  }
+  componentDidUpdate() { try { localStorage.setItem(this.KEY, JSON.stringify(this.state)); } catch (e) {} }
+
+  edit(map, key, val) {
+    this.setState(s => ({ [map]: { ...s[map], [key]: val } }));
+  }
+  editArr(arr, idx, key, val) {
+    this.setState(s => { const a = s[arr].map((x, i) => i === idx ? { ...x, [key]: val } : x); return { [arr]: a }; });
+  }
+
+  // ---------- default model ----------
+  defaultModel() {
+    const weeks = this.genWeeks('2026-02-17', '2027-02-05');
+    // find week covering 2026-05-26
+    let wTarget = 0;
+    weeks.forEach((w, i) => { if ('2026-05-26' >= w.startISO && '2026-05-26' <= w.endISO) wTarget = i; });
+    const sales = {};
+    const seedSales = { fx28: [1940, 32456], fx35: [4100, 102424], xj28: [2206, 30053], xj35: [17812, 314316], dn28: [613, 9203], dn35: [3720, 60496], cut: [1940, 9490] };
+    Object.entries(seedSales).forEach(([c, [q, a]]) => { sales[`${wTarget}:${c}:qty`] = '' + q; sales[`${wTarget}:${c}:amt`] = '' + a; });
+    const purch = {};
+    const seedP = { pmmed: [3006, 22545, 1046.6], pmlarge: [1919, 23943, 687], pflwsmall: [2700, 40366, 1432.31], pflwlarge: [180, 3420, 0] };
+    Object.entries(seedP).forEach(([c, [q, a, f]]) => { purch[`${wTarget}:${c}:qty`] = '' + q; purch[`${wTarget}:${c}:amt`] = '' + a; if (f) purch[`${wTarget}:${c}:frt`] = '' + f; });
+    // sample actuals for the seeded week (so forecast-vs-actual variance is visible)
+    const actualSeed = {
+      [`${wTarget}:foreign`]: '118000', [`${wTarget}:domestic`]: '372000',
+      [`${wTarget}:payroll`]: '82000', [`${wTarget}:materials`]: '151000', [`${wTarget}:utilrent`]: '96000'
+    };
+
+    return {
+      page: 'dash',
+      weekIdx: wTarget,
+      config: { name: '昆明统一生物', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: '2026-06-10', unit: '万', openingBalance: '4227701.72' },
+      assume: {
+        priceDomLarge: '18.25', priceDomSmall: '15.07', priceForLarge: '19', priceForSmall: '16',
+        priceCut: '7.5', priceDye: '40',
+        collectInMonth: '0.7', collectPrior: '0.3',
+        qtyForLarge: '24000', qtyForSmall: '8000', qtyDomLarge: '70000', qtyDomSmall: '12000', qtyDye: '5000', qtyCut: '14000',
+        defectRate: '0.05',
+        seedlingMonthly: '80000', seedlingPrice: '10',
+        pkgCost: '1', prodCost: '0.8',
+        payrollMonthly: '350000', utilitiesMonthly: '110000',
+        freightMonthly: '100000', projectsMonthly: '30000', travelWeekly: '5000', loanMonthly: '45000'
+      },
+      rents: [
+        { name: '大城村租金', amount: '340000', months: '5,11' },
+        { name: '真善美租金', amount: '300000', months: '5,11' },
+        { name: '砚山阿猛基地', amount: '160320', months: '6,11' },
+        { name: '长松园租金', amount: '81944', months: '3' },
+        { name: '小街基地', amount: '60350', months: '9' },
+        { name: '斗南门市', amount: '126240', months: '1' }
+      ],
+      fixed: [
+        { name: '房贷（季度）', amount: '45000', months: '1,4,7,10' },
+        { name: '车辆保险', amount: '17000', months: '9,11' },
+        { name: '人寿/意外险', amount: '11164', months: '10,12' },
+        { name: '出口货物险', amount: '41109', months: '9' },
+        { name: '软件/专利年费', amount: '11300', months: '3,7,11' }
+      ],
+      customers: [
+        { name: '斗南门市批发', outstanding: '186000', note: '每周结算', cat: '省内' },
+        { name: '小街基地走量客户', outstanding: '240000', note: '', cat: '省内' },
+        { name: '俄罗斯出口客户', outstanding: '515000', note: '已到账未结汇', cat: '国外' },
+        { name: '广东全美（转售）', outstanding: '78000', note: '', cat: '省外' },
+        { name: '染色花经销商', outstanding: '44000', note: '', cat: '省内' },
+        { name: '切花批发商', outstanding: '33000', note: '', cat: '国内' }
+      ],
+      assumeWeek: {}, customItems: [],
+      seedPayables: [
+        { supplier: '山东绿航', spec: '2.8寸成熟苗', qty: '41342', price: '7.5', payby: '2026-06-30', urgency: '三级', note: 'IQ26020' },
+        { supplier: '和鸣花卉', spec: '3.5寸成熟苗', qty: '48904', price: '4.6', payby: '2026-06-27', urgency: '二级', note: 'IQ26042' },
+        { supplier: '漳州新百盛', spec: '2.8寸成熟苗', qty: '126000', price: '6.97', payby: '2026-07-15', urgency: '四级', note: 'KMTYP-25040' },
+        { supplier: '厦门品诚', spec: '2.8寸成熟苗', qty: '91000', price: '7.36', payby: '2026-07-31', urgency: '四级', note: 'KMTYP-25032' },
+        { supplier: '汇海生物', spec: '瓶苗', qty: '10000', price: '12.4', payby: '2026-06-20', urgency: '三级', note: '1月出瓶款' },
+        { supplier: '佛山润喆卉', spec: '3.5寸成熟苗', qty: '30000', price: '12', payby: '2026-08-10', urgency: '四级', note: 'KMTYP-25041' }
+      ],
+      sales, purch, fcst: {}, actual: actualSeed, collect: {}
+    };
+  }
+
+  // ---------- weeks ----------
+  genWeeks(startISO, endISO) {
+    const iso = d => d.toISOString().slice(0, 10);
+    const md = d => (d.getMonth() + 1) + '.' + d.getDate();
+    const start = new Date(startISO + 'T00:00:00'), end = new Date(endISO + 'T00:00:00');
+    const weeks = []; let cur = new Date(start), i = 0;
+    while (cur <= end && i < 60) {
+      const ws = new Date(cur), we = new Date(cur); we.setDate(we.getDate() + 6);
+      if (we > end) we.setTime(end.getTime());
+      weeks.push({ idx: i, startISO: iso(ws), endISO: iso(we), label: md(ws) + '–' + md(we), month: ws.getMonth() + 1 });
+      cur.setDate(cur.getDate() + 7); i++;
+    }
+    return weeks;
+  }
+  weeks() { return this.genWeeks(this.state.config.startISO, this.state.config.endISO); }
+
+  // ---------- assumptions-driven compute ----------
+  monthlyFrom(list, m) {
+    return list.reduce((s, r) => {
+      const months = String(r.months).split(',').map(x => parseInt(x.trim()));
+      return months.includes(m) ? s + (parseFloat(r.amount) || 0) : s;
+    }, 0);
+  }
+  // per-week assumption with carry-forward: latest week <= wIdx that defines id, else base
+  effA(wIdx, id) {
+    const aw = this.state.assumeWeek || {};
+    for (let w = wIdx; w >= 0; w--) { const k = w + ':' + id; if (aw[k] !== undefined && aw[k] !== '') return aw[k]; }
+    return (this.state.assume || {})[id];
+  }
+  // value inherited from BEFORE wIdx (for placeholder display)
+  inheritedA(wIdx, id) {
+    const aw = this.state.assumeWeek || {};
+    for (let w = wIdx - 1; w >= 0; w--) { const k = w + ':' + id; if (aw[k] !== undefined && aw[k] !== '') return aw[k]; }
+    return (this.state.assume || {})[id];
+  }
+  effAN(wIdx, id) { const v = parseFloat(this.effA(wIdx, id)); return isNaN(v) ? 0 : v; }
+
+  // seedling-payable cash due within a given week (drives 苗款 timing from the register)
+  seedDueInWeek(weekIdx) {
+    const W = this.weeks(), wk = W[weekIdx]; if (!wk) return 0;
+    return (this.state.seedPayables || []).reduce((s, p) => {
+      if (p.payby && p.payby >= wk.startISO && p.payby <= wk.endISO) return s + (parseFloat(p.qty) || 0) * (parseFloat(p.price) || 0);
+      return s;
+    }, 0);
+  }
+
+  computed(weekIdx) {
+    const W = this.weeks(), wk = W[weekIdx] || W[0];
+    const m = wk.month, WPM = 4.333;
+    const g = id => this.effAN(weekIdx, id);
+    const keep = 1 - g('defectRate');                       // 预测淘汰率 reduces sellable qty
+    const qFL = g('qtyForLarge') * keep, qFS = g('qtyForSmall') * keep;
+    const qDL = g('qtyDomLarge') * keep, qDS = g('qtyDomSmall') * keep, qDye = g('qtyDye') * keep, qCut = g('qtyCut') * keep;
+    const totalQ = qFL + qFS + qDL + qDS + qDye + qCut;
+    const volW = totalQ / WPM;
+    // revenue by channel × size → 国外/国内 collection
+    const foreignMonthly = qFL * g('priceForLarge') + qFS * g('priceForSmall');
+    const domMonthly = qDL * g('priceDomLarge') + qDS * g('priceDomSmall') + qDye * g('priceDye') + qCut * g('priceCut');
+    const foreign = foreignMonthly / WPM;
+    const domestic = domMonthly / WPM * (g('collectInMonth') + g('collectPrior'));
+    // 苗款: committed payables due this week, else assumption baseline
+    const due = this.seedDueInWeek(weekIdx);
+    const seedling = due > 0 ? due : g('seedlingMonthly') / WPM * g('seedlingPrice');
+    const flowering = volW * 0.12 * g('priceDomLarge') * 0.2;
+    const payroll = g('payrollMonthly') / WPM;
+    const utilrent = g('utilitiesMonthly') / WPM + this.monthlyFrom(this.state.rents, m) / WPM;
+    const projects = g('projectsMonthly') / WPM;
+    const materials = volW * (g('pkgCost') + g('prodCost')) + g('freightMonthly') / WPM;
+    const travel = g('travelWeekly');
+    const loan = g('loanMonthly') / WPM + this.monthlyFrom(this.state.fixed, m) / WPM;
+    let custom = 0;
+    (this.state.customItems || []).forEach(it => {
+      const v = this.effAN(weekIdx, it.id);
+      if (it.kind === 'monthlyExpense') custom += v / WPM;
+      else if (it.kind === 'weeklyExpense') custom += v;
+    });
+    return { foreign, domestic, seedling, flowering, payroll, utilrent, projects, materials, travel, loan, custom };
+  }
+
+  isHist(weekIdx) { const w = this.weeks()[weekIdx]; return !!(w && w.endISO <= this.state.config.asOfISO); }
+  // forecast value for a week/field (manual forecast override, else assumption-computed)
+  fcOf(weekIdx, field) {
+    const k = weekIdx + ':' + field, v = (this.state.fcst || {})[k];
+    if (v !== undefined && v !== '') { const p = parseFloat(v); return isNaN(p) ? 0 : p; }
+    return this.computed(weekIdx)[field] || 0;
+  }
+  // actual value, or null if not entered
+  acOf(weekIdx, field) {
+    const k = weekIdx + ':' + field, v = (this.state.actual || {})[k];
+    if (v === undefined || v === '') return null;
+    const p = parseFloat(v); return isNaN(p) ? null : p;
+  }
+  // effective value used in series/dashboard: actual once entered for an elapsed week, else forecast
+  eff(weekIdx, field) {
+    if (this.isHist(weekIdx)) { const a = this.acOf(weekIdx, field); if (a !== null) return a; }
+    return this.fcOf(weekIdx, field);
+  }
+
+  // ---------- series ----------
+  PAYCATS = ['seedling', 'flowering', 'loan', 'payroll', 'utilrent', 'projects', 'materials', 'travel', 'custom'];
+  series() {
+    const W = this.weeks(), cfg = this.state.config;
+    let bal = parseFloat(cfg.openingBalance) || 0;
+    return W.map((w, i) => {
+      const open = bal;
+      const cin = this.eff(i, 'foreign') + this.eff(i, 'domestic');
+      const pays = this.PAYCATS.reduce((s, c) => s + this.eff(i, c), 0);
+      const close = open + cin - pays;
+      bal = close;
+      return { i, w, open, cin, pays, close, net: cin - pays, isHist: w.endISO <= cfg.asOfISO };
+    });
+  }
+
+  // ---------- formatting ----------
+  fmt(y) {
+    const u = this.state.config.unit;
+    if (u === '万') return (y / 10000).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '万';
+    return '¥' + Math.round(y).toLocaleString('zh-CN');
+  }
+  wan(y, d = 1) { return (y / 10000).toFixed(d); }
+
+  // ---------- chart helpers ----------
+  donut(items, cx, cy, rO, rI) {
+    const tot = items.reduce((s, x) => s + x.v, 0) || 1;
+    let ang = -Math.PI / 2;
+    return items.map(it => {
+      const sweep = it.v / tot * Math.PI * 2, a2 = ang + sweep, large = sweep > Math.PI ? 1 : 0;
+      const p = (r, an) => [(cx + r * Math.cos(an)).toFixed(2), (cy + r * Math.sin(an)).toFixed(2)];
+      const [x1, y1] = p(rO, ang), [x2, y2] = p(rO, a2), [x3, y3] = p(rI, a2), [x4, y4] = p(rI, ang);
+      const d = `M${x1},${y1} A${rO},${rO} 0 ${large} 1 ${x2},${y2} L${x3},${y3} A${rI},${rI} 0 ${large} 0 ${x4},${y4} Z`;
+      ang = a2;
+      return { k: it.k, color: it.color, d, pct: (it.v / tot * 100).toFixed(0) + '%' };
+    });
+  }
+
+  renderVals() {
+    const S = this.state, page = S.page;
+    const navDef = [
+      { id: 'dash', label: '总览', sym: '◧' }, { id: 'hist', label: '历史数据', sym: '◷' },
+      { id: 'fcst', label: '预测', sym: '⤴' }, { id: 'assume', label: '假设', sym: '⚙' },
+      { id: 'seedpay', label: '苗款', sym: '❀' }, { id: 'ar', label: '应收账款', sym: '▤' }, { id: 'report', label: '管理层报告', sym: '⎙' }
+    ];
+    const navItems = navDef.map(n => ({
+      ...n, bg: n.id === page ? 'rgba(110,131,72,.16)' : 'transparent',
+      bd: n.id === page ? 'rgba(110,131,72,.34)' : 'transparent',
+      color: n.id === page ? '#46552c' : '#7d7567',
+      weight: n.id === page ? 700 : 500,
+      dotBg: 'transparent'
+    }));
+    const titles = {
+      dash: ['财务总览', '历史 + 预测合并的全年财务全景'],
+      hist: ['历史数据', '按周录入实际销售、进货与现金流'],
+      fcst: ['预测', '由假设自动生成 · 每周可覆盖'],
+      assume: ['假设', '逐周设定 · 默认继承上一周 · 驱动该周预测'],
+      seedpay: ['苗款', '应付苗款登记 · 供应商、规格、数量、单价与付款日期'],
+      ar: ['应收账款', '客户应收余额与每周预计回款'],
+      report: ['管理层报告', '一页式 · 非财务人员也能读懂']
+    };
+    const fy = (S.config.startISO || '').slice(2).replace(/-/g, '.') + ' → ' + (S.config.endISO || '').slice(2).replace(/-/g, '.');
+
+    // ----- dashboard data -----
+    const ser = this.series();
+    let fb = parseFloat(S.config.openingBalance) || 0;
+    const fcCloses = ser.map((s, i) => { const open = fb; const cin = this.fcOf(i, 'foreign') + this.fcOf(i, 'domestic'); const pays = this.PAYCATS.reduce((a, f) => a + this.fcOf(i, f), 0); const close = open + cin - pays; fb = close; return close; });
+    const acCloses = ser.map(s => s.close);
+    const minV = Math.min(...fcCloses, ...acCloses, parseFloat(S.config.openingBalance) || 0);
+    const maxV = Math.max(...fcCloses, ...acCloses, parseFloat(S.config.openingBalance) || 0);
+    const span = (maxV - minV) || 1;
+    const W = 1000, H = 250, pl = 44, pr = 8, pt = 30, pb = 32, iw = W - pl - pr, ih = H - pt - pb;
+    const xs = i => pl + (ser.length <= 1 ? iw / 2 : iw * i / (ser.length - 1));
+    const ys = v => pt + ih * (1 - (v - minV) / span);
+    const lastHist = ser.reduce((acc, s, i) => s.isHist ? i : acc, 0);
+    const forecastPts = fcCloses.map((v, i) => (+xs(i).toFixed(1)) + ',' + (+ys(v).toFixed(1))).join(' ');
+    const actualPts = acCloses.slice(0, lastHist + 1).map((v, i) => (+xs(i).toFixed(1)) + ',' + (+ys(v).toFixed(1))).join(' ');
+    const trajArea = ser.length ? 'M' + (+xs(0).toFixed(1)) + ',' + (H - pb) + ' L' + fcCloses.map((v, i) => (+xs(i).toFixed(1)) + ',' + (+ys(v).toFixed(1))).join(' L') + ' L' + (+xs(ser.length - 1).toFixed(1)) + ',' + (H - pb) + ' Z' : '';
+    this._hov = {
+      xs: ser.map((_, i) => +xs(i).toFixed(1)),
+      yf: fcCloses.map(v => +ys(v).toFixed(1)),
+      ya: ser.map((s, i) => i <= lastHist ? +ys(acCloses[i]).toFixed(1) : null),
+      lab: ser.map(s => s.w.month + '月 ' + s.w.label),
+      fcStr: fcCloses.map(v => this.fmt(v)),
+      acStr: acCloses.map(v => this.fmt(v)),
+      varStr: ser.map((s, i) => { const f = fcCloses[i]; if (!f) return '—'; const p = (acCloses[i] - f) / Math.abs(f) * 100; return (p >= 0 ? '+' : '') + p.toFixed(1) + '%'; }),
+      varCol: ser.map((s, i) => { const f = fcCloses[i]; const p = f ? (acCloses[i] - f) / Math.abs(f) * 100 : 0; return Math.abs(p) < 0.5 ? '#8a8273' : (p >= 0 ? '#6e8348' : '#c24433'); })
+    };
+    const asOfX = +xs(lastHist).toFixed(1);
+    const yTicks = [0, 1, 2, 3].map(k => { const v = maxV - span * (k / 3); return { y: pt + ih * (k / 3) + 3, label: this.wan(v, 0) }; });
+    const xTicks = ser.filter((_, i) => i % Math.ceil(ser.length / 7) === 0).map(s => ({ x: +xs(s.i).toFixed(1), label: s.w.month + '月' }));
+
+    // monthly bars
+    const monthMap = {};
+    ser.forEach(s => { const m = s.w.month; if (!monthMap[m]) monthMap[m] = { cin: 0, pays: 0 }; monthMap[m].cin += s.cin; monthMap[m].pays += s.pays; });
+    const monthOrder = [...new Set(ser.map(s => s.w.month))];
+    const maxBar = Math.max(...monthOrder.map(m => Math.max(monthMap[m].cin, monthMap[m].pays)), 1);
+    const monthBars = monthOrder.map(m => ({
+      label: m + '月',
+      inH: (monthMap[m].cin / maxBar * 150).toFixed(0) + 'px',
+      outH: (monthMap[m].pays / maxBar * 150).toFixed(0) + 'px'
+    }));
+
+    // expense donut (full year)
+    const payTotals = {};
+    this.PAYCATS.forEach(c => payTotals[c] = ser.reduce((s, x) => s + this.eff(x.i, c), 0));
+    const payColors = { seedling: '#c96442', flowering: '#b5862f', payroll: '#4e7c4f', utilrent: '#dd8a63', materials: '#b07a52', projects: '#e0a079', loan: '#7c3a23', travel: '#f0cdb8', custom: '#a3886a' };
+    const payNames = { seedling: '苗款', flowering: '开花株款', payroll: '工资社保', utilrent: '水电租金', materials: '物资运费', projects: '工程项目', loan: '借款/固定', travel: '差旅其他', custom: '其他自定义' };
+    const donutItems = this.PAYCATS.map(c => ({ k: payNames[c], v: payTotals[c], color: payColors[c] })).sort((a, b) => b.v - a.v).filter(x => x.v > 0);
+    const dashDonut = this.donut(donutItems, 65, 65, 56, 31);
+    const totalPay = Object.values(payTotals).reduce((a, b) => a + b, 0);
+
+    const totalCin = ser.reduce((s, x) => s + x.cin, 0);
+    const histCin = ser.filter(s => s.isHist).reduce((s, x) => s + x.cin, 0);
+    const fcstCin = totalCin - histCin;
+    const yearEnd = ser.length ? ser[ser.length - 1].close : 0;
+    const minClose = Math.min(...acCloses);
+    const minWeek = ser.find(s => s.close === minClose);
+    const arTotal = S.customers.reduce((s, c) => s + (parseFloat(c.outstanding) || 0), 0);
+    const arWeekCollect = S.customers.reduce((s, c, ci) => s + (parseFloat(S.collect[ci + ':' + S.weekIdx]) || 0), 0);
+
+    const dashKpis = [
+      { label: '现可用款 / 期初', val: this.fmt(parseFloat(S.config.openingBalance) || 0), color: 'var(--plum)', sub: '财年起始余额', subColor: 'var(--muted)' },
+      { label: '全年收款', val: this.fmt(totalCin), color: 'var(--leaf)', sub: '实际 ' + this.wan(histCin) + '万 + 预测 ' + this.wan(fcstCin) + '万', subColor: 'var(--muted)' },
+      { label: '全年支出', val: this.fmt(totalPay), color: 'var(--rose)', sub: '7 大类合计', subColor: 'var(--muted)' },
+      { label: '年末预计余额', val: this.fmt(yearEnd), color: 'var(--plum2)', sub: (yearEnd >= (parseFloat(S.config.openingBalance) || 0) ? '↑ 较期初增长' : '↓ 较期初下降'), subColor: yearEnd >= (parseFloat(S.config.openingBalance) || 0) ? 'var(--leaf)' : 'var(--rose)' },
+      { label: '最低现金谷底', val: this.fmt(minClose), color: minClose < 1000000 ? 'var(--rose)' : 'var(--gold)', sub: (minWeek ? minWeek.w.month + '月 (' + minWeek.w.label + ')' : ''), subColor: 'var(--muted)' }
+    ];
+
+    // ===================== per-page data =====================
+    const yuan0 = v => Math.round(v).toLocaleString('zh-CN');
+    const selIdx = S.weekIdx;
+    const selRow = ser[selIdx] || { open: 0, cin: 0, pays: 0, close: 0, net: 0 };
+    const selWk = this.weeks()[selIdx] || { label: '', month: 0 };
+    const weekChip = s => ({ idx: s.i, label: s.w.label, month: s.w.month + '月', selBg: s.i === selIdx ? 'var(--leaf)' : '#fff', selColor: s.i === selIdx ? '#fff' : 'var(--ink)', selBd: s.i === selIdx ? 'var(--leaf)' : 'var(--line)', selShadow: s.i === selIdx ? '0 6px 14px -6px rgba(110,131,72,.55)' : '0 1px 0 rgba(0,0,0,.02)', netColor: s.net >= 0 ? (s.i === selIdx ? '#dfeccb' : 'var(--leaf)') : (s.i === selIdx ? '#f4cabf' : 'var(--rose)'), net: (s.net >= 0 ? '+' : '−') + this.wan(Math.abs(s.net)) });
+    const histWeeks = ser.filter(s => s.isHist).map(weekChip);
+    const fcstWeeks = ser.filter(s => !s.isHist).map(weekChip);
+
+    const salesRows = this.SALESCATS.map(c => {
+      const qk = `${selIdx}:${c.id}:qty`, ak = `${selIdx}:${c.id}:amt`;
+      const qty = S.sales[qk] ?? '', amt = S.sales[ak] ?? '';
+      const q = parseFloat(qty) || 0, a = parseFloat(amt) || 0;
+      return { name: c.name, grp: c.grp, qtyKey: qk, amtKey: ak, qty, amt, price: q > 0 ? (a / q).toFixed(2) : '—' };
+    });
+    const salesQsum = salesRows.reduce((s, r) => s + (parseFloat(r.qty) || 0), 0);
+    const salesAsum = salesRows.reduce((s, r) => s + (parseFloat(r.amt) || 0), 0);
+
+    const purchRows = this.PURCHCATS.map(c => {
+      const qk = `${selIdx}:${c.id}:qty`, ak = `${selIdx}:${c.id}:amt`, fk = `${selIdx}:${c.id}:frt`;
+      const qty = S.purch[qk] ?? '', amt = S.purch[ak] ?? '', frt = S.purch[fk] ?? '';
+      const q = parseFloat(qty) || 0, a = parseFloat(amt) || 0;
+      return { name: c.name, qtyKey: qk, amtKey: ak, frtKey: fk, qty, amt, frt, price: q > 0 ? (a / q).toFixed(2) : '—' };
+    });
+    const purchAsum = purchRows.reduce((s, r) => s + (parseFloat(r.amt) || 0) + (parseFloat(r.frt) || 0), 0);
+
+    const WPM = 4.333, gA = id => this.effAN(selIdx, id), keep = 1 - gA('defectRate');
+    const recDefs = [['foreign', '国外收款'], ['domestic', '国内收款']];
+    const payRowDefs = [['seedling', '苗款'], ['flowering', '开花株款'], ['payroll', '工资社保税费'], ['utilrent', '水电与租金'], ['projects', '项目及工程'], ['materials', '生产物资运费'], ['travel', '差旅招待加油伙食'], ['loan', '归还借款 / 固定支出'], ['custom', '其他自定义支出']];
+    // forecast-page rows (edit forecast override; placeholder = assumption value)
+    const fcstRow = (f, label) => ({ key: `${selIdx}:${f}`, label, val: (S.fcst[`${selIdx}:${f}`]) ?? '', ph: '≈' + yuan0(this.computed(selIdx)[f] || 0) });
+    const fcstReceiptRows = recDefs.map(([f, l]) => fcstRow(f, l));
+    const fcstPayRows = payRowDefs.map(([f, l]) => fcstRow(f, l));
+    // historical-page rows (enter actual; placeholder = what was forecast; show variance %)
+    const acVar = f => { const fc = this.fcOf(selIdx, f), ac = this.acOf(selIdx, f); if (ac === null || fc === 0) return { pct: '', color: 'transparent' }; const p = (ac - fc) / fc * 100; return { pct: (p >= 0 ? '+' : '') + p.toFixed(1) + '%', color: Math.abs(p) < 1 ? 'var(--muted)' : (p >= 0 ? 'var(--leaf)' : 'var(--rose)') }; };
+    const histRow = (f, label) => { const v = acVar(f); return { key: `${selIdx}:${f}`, label, val: (S.actual[`${selIdx}:${f}`]) ?? '', ph: '预测 ' + yuan0(this.fcOf(selIdx, f)), varPct: v.pct, varColor: v.color }; };
+    const histReceiptRows = recDefs.map(([f, l]) => histRow(f, l));
+    const histPayRows = payRowDefs.map(([f, l]) => histRow(f, l));
+    // net variance for the selected (elapsed) week
+    const selFcNet = recDefs.reduce((a, [f]) => a + this.fcOf(selIdx, f), 0) - this.PAYCATS.reduce((a, f) => a + this.fcOf(selIdx, f), 0);
+    const selVarP = selFcNet !== 0 ? (selRow.net - selFcNet) / Math.abs(selFcNet) * 100 : 0;
+    const hasActual = recDefs.concat(payRowDefs).some(([f]) => this.acOf(selIdx, f) !== null);
+
+    // revenue breakdown (forecast page)
+    const rb = (qid, pid) => { const qW = gA(qid) * keep / WPM; return { qty: Math.round(qW).toLocaleString('zh-CN'), price: gA(pid), amt: yuan0(qW * gA(pid)) }; };
+    const domGrossW = (gA('qtyDomLarge') * gA('priceDomLarge') + gA('qtyDomSmall') * gA('priceDomSmall') + gA('qtyDye') * gA('priceDye') + gA('qtyCut') * gA('priceCut')) * keep / WPM;
+    const revBreak = {
+      defect: (gA('defectRate') * 100).toFixed(1) + '%',
+      forLarge: rb('qtyForLarge', 'priceForLarge'), forSmall: rb('qtyForSmall', 'priceForSmall'),
+      domLarge: rb('qtyDomLarge', 'priceDomLarge'), domSmall: rb('qtyDomSmall', 'priceDomSmall'),
+      dye: rb('qtyDye', 'priceDye'), cut: rb('qtyCut', 'priceCut'),
+      collectRate: ((gA('collectInMonth') + gA('collectPrior')) * 100).toFixed(0) + '%',
+      domGross: yuan0(domGrossW),
+      foreignTotal: this.fmt(this.fcOf(selIdx, 'foreign')), domesticTotal: this.fmt(this.fcOf(selIdx, 'domestic'))
+    };
+    const revBreakForeign = [{ label: '国外大花', ...revBreak.forLarge }, { label: '国外小花', ...revBreak.forSmall }];
+    const revBreakDom = [{ label: '国内大花', ...revBreak.domLarge }, { label: '国内小花', ...revBreak.domSmall }, { label: '染色花', ...revBreak.dye }, { label: '切花', ...revBreak.cut }];
+
+    // seedling payables register
+    const dayMs = 86400000, asOf = S.config.asOfISO;
+    const seedRows = S.seedPayables.map((p, i) => {
+      const amt = (parseFloat(p.qty) || 0) * (parseFloat(p.price) || 0);
+      const overdue = p.payby && p.payby < asOf, soon = p.payby && p.payby >= asOf && (new Date(p.payby) - new Date(asOf)) / dayMs <= 30;
+      const uColor = { '一级': '#e8b84b', '二级': '#b9a7b3', '三级': '#5fb88a', '四级': '#6b9bd1' }[p.urgency] || 'var(--muted)';
+      return { idx: i, supplier: p.supplier, spec: p.spec, qty: p.qty, price: p.price, payby: p.payby, urgency: p.urgency, note: p.note, amt: this.fmt(amt), uColor, statusColor: overdue ? 'var(--rose)' : soon ? 'var(--gold)' : 'var(--muted)', statusText: overdue ? '已逾期' : soon ? '30天内' : '未到期' };
+    });
+    const seedTotal = this.fmt(S.seedPayables.reduce((s, p) => s + (parseFloat(p.qty) || 0) * (parseFloat(p.price) || 0), 0));
+    const seedSoon = this.fmt(S.seedPayables.reduce((s, p) => { if (p.payby && p.payby >= asOf && (new Date(p.payby) - new Date(asOf)) / dayMs <= 30) return s + (parseFloat(p.qty) || 0) * (parseFloat(p.price) || 0); return s; }, 0));
+    const urgencyOptions = ['一级', '二级', '三级', '四级'];
+
+    const upcoming = ser.slice(selIdx, selIdx + 9).map(s => ({
+      label: s.w.label, month: s.w.month + '月', cin: this.wan(s.cin), pays: this.wan(s.pays),
+      net: (s.net >= 0 ? '+' : '−') + this.wan(Math.abs(s.net)), netColor: s.net >= 0 ? 'var(--leaf)' : 'var(--rose)',
+      close: this.wan(s.close), rowBg: s.i === selIdx ? 'var(--lilac)' : 'transparent', tag: s.isHist ? '实际' : '预测', tagColor: s.isHist ? 'var(--plum)' : 'var(--orchid)'
+    }));
+
+    const phf = v => (v === undefined || v === '') ? '—' : String(v);
+    const fld = (id, label, unit, hint) => {
+      const k = `${selIdx}:${id}`, ov = S.assumeWeek[k];
+      return { key: k, label, unit, hint: hint || '', val: ov ?? '', ph: '继承 ' + phf(this.inheritedA(selIdx, id)), badge: (ov !== undefined && ov !== '') ? '本周覆盖' : '', badgeColor: (ov !== undefined && ov !== '') ? 'var(--orchid)' : 'transparent' };
+    };
+    const grpCustom = gid => S.customItems.map((c, i) => ({ c, i })).filter(o => o.c.group === gid).map(o => {
+      const k = `${selIdx}:${o.c.id}`, ov = S.assumeWeek[k];
+      return { custIdx: o.i, id: o.c.id, name: o.c.name, unit: o.c.unit, key: k, val: ov ?? '', ph: '继承 ' + phf(this.inheritedA(selIdx, o.c.id)) };
+    });
+    const assumeGroups = [
+      { gid: 'price', title: '销售单价', desc: '每株价格', sym: '¥', fields: [fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3寸', '元/株'), fld('priceForLarge', '国外大花', '元/株'), fld('priceForSmall', '国外小花', '元/株'), fld('priceCut', '切花', '元/株'), fld('priceDye', '染色花', '元/株')], custom: grpCustom('price') },
+      { gid: 'collect', title: '回款节奏', desc: '当月与次月回款比例', sym: '%', fields: [fld('collectInMonth', '当月回款率', '比例', '0.7 = 70%'), fld('collectPrior', '次月回款率', '比例', '0.3 = 30%')], custom: grpCustom('collect') },
+      { gid: 'volume', title: '销量与淘汰', desc: '各渠道月销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花数量', '株/月'), fld('qtyForSmall', '国外小花数量', '株/月'), fld('qtyDomLarge', '国内大花数量', '株/月'), fld('qtyDomSmall', '国内小花数量', '株/月'), fld('qtyDye', '染色花数量', '株/月'), fld('qtyCut', '切花数量', '株/月'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
+      { gid: 'seed', title: '种苗采购', desc: '每月进苗与成本', sym: '❀', fields: [fld('seedlingMonthly', '月进苗株数', '株/月'), fld('seedlingPrice', '种苗平均单价', '元/株')], custom: grpCustom('seed') },
+      { gid: 'material', title: '生产物料成本', desc: '每株物料成本', sym: '▦', fields: [fld('pkgCost', '包装材料', '元/株'), fld('prodCost', '生产材料', '元/株')], custom: grpCustom('material') },
+      { gid: 'opex', title: '人工 · 水电 · 运费 · 其他', desc: '每月固定运营支出', sym: '⚙', fields: [fld('payrollMonthly', '工资社保税费', '元/月'), fld('utilitiesMonthly', '水电费', '元/月'), fld('freightMonthly', '运费', '元/月'), fld('projectsMonthly', '项目及工程', '元/月'), fld('travelWeekly', '差旅招待（每周）', '元/周'), fld('loanMonthly', '房贷/借款', '元/月')], custom: grpCustom('opex') }
+    ];
+
+    const CATS = ['国外', '国内', '省内', '省外'];
+    const catColors = { '国外': '#b5862f', '国内': '#c96442', '省内': '#4e7c4f', '省外': '#dd8a63' };
+    const custRows = S.customers.map((c, i) => {
+      const ck = `${i}:${selIdx}`;
+      return { idx: i, name: c.name, outstanding: c.outstanding, note: c.note, cat: c.cat || '国内', catColor: catColors[c.cat] || '#c96442', collectKey: ck, collect: S.collect[ck] ?? '', barW: 0 };
+    });
+    const arMax = Math.max(...S.customers.map(c => parseFloat(c.outstanding) || 0), 1);
+    custRows.forEach(c => c.barW = ((parseFloat(c.outstanding) || 0) / arMax * 100).toFixed(0) + '%');
+    const arOut = S.customers.reduce((s, c) => s + (parseFloat(c.outstanding) || 0), 0);
+    const arCol = S.customers.reduce((s, c, i) => s + (parseFloat(S.collect[`${i}:${selIdx}`]) || 0), 0);
+    const catSummary = CATS.map(cat => ({ cat, color: catColors[cat], val: this.fmt(S.customers.reduce((s, c) => s + ((c.cat || '国内') === cat ? (parseFloat(c.outstanding) || 0) : 0), 0)) }));
+
+    // report
+    const profit = totalCin - totalPay;
+    const repLines = [
+      `本财年（${fy}）期初可用资金 ${this.fmt(parseFloat(S.config.openingBalance) || 0)}，预计年末余额 ${this.fmt(yearEnd)}，较期初${yearEnd >= (parseFloat(S.config.openingBalance) || 0) ? '增长' : '下降'} ${this.fmt(Math.abs(yearEnd - (parseFloat(S.config.openingBalance) || 0)))}。`,
+      `全年预计收款 ${this.fmt(totalCin)}（实际 ${this.fmt(histCin)} + 预测 ${this.fmt(fcstCin)}），合计支出 ${this.fmt(totalPay)}，全年净现金流 ${profit >= 0 ? '盈余' : '缺口'} ${this.fmt(Math.abs(profit))}。`,
+      `现金最紧张出现在 ${minWeek ? minWeek.w.month + '月' : '—'}，余额降至 ${this.fmt(minClose)}${minClose < 1000000 ? '，需重点关注流动性' : '，整体安全'}。`,
+      `应收账款合计 ${this.fmt(arOut)}，来自 ${S.customers.length} 位客户，是后续回款的主要来源。`
+    ];
+    const repKpis = [
+      { label: '期初可用资金', val: this.fmt(parseFloat(S.config.openingBalance) || 0), color: 'var(--plum)' },
+      { label: '全年收款', val: this.fmt(totalCin), color: 'var(--leaf)' },
+      { label: '全年支出', val: this.fmt(totalPay), color: 'var(--rose)' },
+      { label: '年末预计余额', val: this.fmt(yearEnd), color: 'var(--plum2)' }
+    ];
+
+    // dashboard: cumulative forecast variance over elapsed weeks
+    let aN = 0, fN = 0, anyAct = false;
+    ser.forEach(s => {
+      if (!s.isHist) return;
+      const fnet = this.fcOf(s.i, 'foreign') + this.fcOf(s.i, 'domestic') - this.PAYCATS.reduce((a, f) => a + this.fcOf(s.i, f), 0);
+      fN += fnet; aN += s.net;
+      if (recDefs.concat(payRowDefs).some(([f]) => this.acOf(s.i, f) !== null)) anyAct = true;
+    });
+    const varAgg = (anyAct && fN !== 0) ? (aN - fN) / Math.abs(fN) * 100 : null;
+    const varAggStr = varAgg === null ? '尚无实际数据录入' : '已发生周实际净现金流较预测 ' + (varAgg >= 0 ? '+' : '') + varAgg.toFixed(1) + '%';
+    const varAggColor = varAgg === null ? 'var(--muted)' : (varAgg >= 0 ? 'var(--leaf)' : 'var(--rose)');
+
+    return {
+      navItems, onNav: this.onNav, onConfig: this.onConfig, onEdit: this.onEdit, onEditArr: this.onEditArr,
+      onEditCollect: this.onEditCollect, selectWeek: this.selectWeek, addRow: this.addRow, delRow: this.delRow, doPrint: this.doPrint,
+      onEditAssume: this.onEditAssume, addAssumeItem: this.addAssumeItem, delCustom: this.delCustom,
+      onChartMove: this.onChartMove, onChartLeave: this.onChartLeave,
+      catSummary, catOptions: CATS,
+      isHist: page === 'hist', isFcst: page === 'fcst', isAssume: page === 'assume', isAr: page === 'ar', isReport: page === 'report', isSeedpay: page === 'seedpay',
+      selWeekLabel: selWk.label, selMonth: selWk.month + '月', selOpenWan: this.fmt(selRow.open), selCloseWan: this.fmt(selRow.close),
+      selNet: (selRow.net >= 0 ? '+' : '−') + this.fmt(Math.abs(selRow.net)), selNetColor: selRow.net >= 0 ? 'var(--leaf)' : 'var(--rose)',
+      selFcNetWan: (selFcNet >= 0 ? '+' : '−') + this.fmt(Math.abs(selFcNet)), selVarStr: (hasActual ? (selVarP >= 0 ? '+' : '') + selVarP.toFixed(1) + '%' : '—'), selVarColor: !hasActual ? 'var(--muted)' : (selVarP >= 0 ? 'var(--leaf)' : 'var(--rose)'), hasActual,
+      histWeeks, fcstWeeks, allWeeks: ser.map(weekChip), salesRows, salesQstr: salesQsum.toLocaleString('zh-CN'), salesAstr: this.fmt(salesAsum),
+      purchRows, purchAstr: this.fmt(purchAsum),
+      fcstReceiptRows, fcstPayRows, histReceiptRows, histPayRows, revBreak, revBreakForeign, revBreakDom,
+      seedRows, seedTotal, seedSoon, urgencyOptions,
+      receiptSum: this.fmt(this.eff(selIdx, 'foreign') + this.eff(selIdx, 'domestic')), paySum: this.fmt(this.PAYCATS.reduce((s, c) => s + this.eff(selIdx, c), 0)),
+      upcoming, assumeGroups, rents: S.rents, fixed: S.fixed, custRows, arOutWan: this.fmt(arOut), arColWan: this.fmt(arCol),
+      repLines, repKpis, repCompany: S.config.name, repFy: fy,
+      onToggleUnit: this.onToggleUnit, onReset: this.onReset,
+      cfg: S.config, fyShort: fy, asOfShort: (S.config.asOfISO || '').slice(5),
+      pageTitle: titles[page] ? titles[page][0] : '', pageSub: titles[page] ? titles[page][1] : '',
+      unitLabel: '单位：' + S.config.unit, 
+      isDash: page === 'dash', varAggStr, varAggColor,
+      dashKpis, trajActual: actualPts, trajForecast: forecastPts, trajArea, asOfX, yTicks, xTicks,
+      monthBars, dashDonut, totalPayWan: this.wan(totalPay) + '万',
+      arTotalWan: this.fmt(arTotal), arCount: S.customers.length, arWeekCollectWan: this.fmt(arWeekCollect)
+    };
+  }
+}
+</script>
+</body>
+</html>

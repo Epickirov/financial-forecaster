@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>昆明统一生物科技有限公司 · 财务分析系统</title>
+  <!-- No external fonts/CDN: renders fully offline and inside the Great
+       Firewall. System CJK fonts (PingFang SC / Microsoft YaHei / Noto Sans
+       CJK) are used via the stacks defined in styles.css. -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="bg-cross"></div>
+
+  <!-- load order matters: engine → store → app (classic scripts, so this
+       works straight from file:// with no build step and no network) -->
+  <script src="src/engine.js"></script>
+  <script src="src/store.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>

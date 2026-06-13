@@ -1,0 +1,97 @@
+[
+ {
+  "name": "新25年新历销售",
+  "rid": "rId1",
+  "file": "worksheets/sheet1.xml"
+ },
+ {
+  "name": "新25年农历销售",
+  "rid": "rId2",
+  "file": "worksheets/sheet2.xml"
+ },
+ {
+  "name": "26年新历销售",
+  "rid": "rId3",
+  "file": "worksheets/sheet3.xml"
+ },
+ {
+  "name": "26年农历销售",
+  "rid": "rId4",
+  "file": "worksheets/sheet4.xml"
+ },
+ {
+  "name": "进货验货报告",
+  "rid": "rId5",
+  "file": "worksheets/sheet5.xml"
+ },
+ {
+  "name": "26数据",
+  "rid": "rId6",
+  "file": "worksheets/sheet6.xml"
+ },
+ {
+  "name": "生产",
+  "rid": "rId7",
+  "file": "worksheets/sheet7.xml"
+ },
+ {
+  "name": "24年农历销售",
+  "rid": "rId8",
+  "file": "worksheets/sheet8.xml"
+ },
+ {
+  "name": "24年新历销售",
+  "rid": "rId9",
+  "file": "worksheets/sheet9.xml"
+ },
+ {
+  "name": "25年新历销售",
+  "rid": "rId10",
+  "file": "worksheets/sheet10.xml"
+ },
+ {
+  "name": "25年农历销售",
+  "rid": "rId11",
+  "file": "worksheets/sheet11.xml"
+ },
+ {
+  "name": "25年淘汰",
+  "rid": "rId12",
+  "file": "worksheets/sheet12.xml"
+ },
+ {
+  "name": "26年淘汰",
+  "rid": "rId13",
+  "file": "worksheets/sheet13.xml"
+ },
+ {
+  "name": "24年淘汰",
+  "rid": "rId14",
+  "file": "worksheets/sheet14.xml"
+ },
+ {
+  "name": "22年淘汰",
+  "rid": "rId15",
+  "file": "worksheets/sheet15.xml"
+ },
+ {
+  "name": "23年淘汰",
+  "rid": "rId16",
+  "file": "worksheets/sheet16.xml"
+ },
+ {
+  "name": "24年销售",
+  "rid": "rId17",
+  "file": "worksheets/sheet17.xml"
+ },
+ {
+  "name": "2025年淘汰",
+  "rid": "rId18",
+  "file": "worksheets/sheet18.xml"
+ },
+ {
+  "name": "2026年淘汰",
+  "rid": "rId19",
+  "file": "worksheets/sheet19.xml"
+ }
+]
