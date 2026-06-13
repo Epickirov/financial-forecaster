@@ -12,6 +12,12 @@ const { window } = dom;
 window.eval(read('src/engine.js')); window.eval(read('src/store.js')); window.eval(read('src/app.js'));
 if (window.document.readyState === 'loading') window.document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true }));
 
+// The shipped app boots a BLANK template; the wiring suite needs the rich
+// demo numbers to observe drivers moving outputs, so inject the fixture.
+const demoModel = require('./fixtures.js');
+window.FFApp.store.state = demoModel();
+window.FFApp.rerender();
+
 const app = window.document.getElementById('app');
 const { store, engine: E, buildView } = window.FFApp;
 let pass = 0;

@@ -4,16 +4,28 @@
 var assert = require('assert');
 
 var E = require('../src/engine.js');
-global.FFEngine = E;                       // store.js reads global.FFEngine
-var FFStore = require('../src/store.js');
+var FFStore = require('../src/store.js');   // the shipped (blank) model
+var demoModel = require('./fixtures.js');   // rich demo data the suite asserts against
 
 var passed = 0;
 function test(name, fn) { fn(); passed++; console.log('  ok  ' + name); }
 function approx(a, b, eps) { assert.ok(Math.abs(a - b) <= (eps || 1e-6), 'expected ' + a + ' ≈ ' + b); }
 
-function fresh() { return JSON.parse(JSON.stringify(FFStore.defaultModel())); }
+function fresh() { return JSON.parse(JSON.stringify(demoModel())); }
 
 console.log('engine.test.js');
+
+// ---- the shipped app carries structure but ZERO financial data ----------
+test('shipped defaultModel keeps names/specs but clears all financial figures', function () {
+  var d = FFStore.defaultModel();
+  assert.strictEqual(d.config.openingBalance, '', 'opening balance cleared');
+  Object.keys(d.assume).forEach(function (k) { assert.strictEqual(d.assume[k], '', 'assume.' + k + ' cleared'); });
+  ['sales', 'purch', 'fcst', 'actual', 'collect'].forEach(function (m) { assert.deepStrictEqual(d[m], {}, m + ' empty'); });
+  d.rents.forEach(function (r) { assert.ok(r.name, 'rent name kept'); assert.strictEqual(r.amount, '', 'rent amount cleared'); });
+  d.fixed.forEach(function (r) { assert.ok(r.name, 'fixed name kept'); assert.strictEqual(r.amount, '', 'fixed amount cleared'); });
+  d.customers.forEach(function (c) { assert.ok(c.name, 'customer name kept'); assert.strictEqual(c.outstanding, '', 'customer balance cleared'); });
+  d.seedPayables.forEach(function (p) { assert.ok(p.supplier && p.spec, 'supplier+spec kept'); assert.strictEqual(p.qty, '', 'payable qty cleared'); assert.strictEqual(p.price, '', 'payable price cleared'); assert.strictEqual(p.payby, '', 'payable due date cleared'); });
+});
 
 // ---- week grid -----------------------------------------------------------
 test('genWeeks covers the fiscal year as ~50 weekly buckets', function () {
