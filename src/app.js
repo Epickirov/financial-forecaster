@@ -143,6 +143,8 @@
     // dashboard "预计本周回款" = the week containing the as-of date (真正的"本周"),
     // not whatever week is selected on another page.
     var curW = E.currentWeekIdx(S);
+    var _aop = (S.config.asOfISO || '').split('-');
+    var asOfMD = _aop.length === 3 ? (+_aop[1]) + '月' + (+_aop[2]) + '日' : '';
     var arWeekCollect = S.customers.reduce(function (s, c, ci) { return s + num(S.collect[ci + ':' + curW]); }, 0);
 
     var dashKpis = [
@@ -314,7 +316,7 @@
       page: page, navItems: navItems, pageTitle: titles[page] ? titles[page][0] : '', pageSub: titles[page] ? titles[page][1] : '',
       cfg: S.config, fy: fy, unitLabel: '单位：' + S.config.unit,
       dashKpis: dashKpis, varAggStr: varAggStr, varAggColor: varAggColor,
-      yTicks: yTicks, xTicks: xTicks, trajArea: trajArea, trajForecast: forecastPts, trajActual: actualPts, asOfX: asOfX,
+      yTicks: yTicks, xTicks: xTicks, trajArea: trajArea, trajForecast: forecastPts, trajActual: actualPts, asOfX: asOfX, asOfWeekNo: curW + 1, asOfDate: asOfMD,
       monthBars: monthBars, dashDonut: dashDonut, totalPayWan: wan(totalPay) + '万',
       arTotalWan: fmt(arTotal), arCount: S.customers.length, arWeekCollectWan: fmt(arWeekCollect),
       selWeekLabel: selWk.label, selCloseWan: fmt(selRow.close),
@@ -413,7 +415,8 @@
       '<polyline points="' + V.trajForecast + '" fill="none" stroke="var(--orchid)" stroke-width="2"' + dash + ' stroke-linecap="round" stroke-linejoin="round"></polyline>' +
       '<polyline points="' + V.trajActual + '" fill="none" stroke="var(--plum)" stroke-width="2.5" stroke-linejoin="round"></polyline>' +
       '<line x1="' + V.asOfX + '" y1="28" x2="' + V.asOfX + '" y2="218" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="3 3"></line>' +
-      '<text x="' + V.asOfX + '" y="22" text-anchor="middle" style="font-size:10px; fill:var(--gold); font-weight:600;">今天</text>' +
+      '<text x="' + V.asOfX + '" y="11" text-anchor="middle" style="font-size:10px; fill:var(--gold); font-weight:700;">今日</text>' +
+      '<text x="' + V.asOfX + '" y="22" text-anchor="middle" style="font-size:8.5px; fill:var(--gold);">第' + V.asOfWeekNo + '周 · ' + esc(V.asOfDate) + '</text>' +
       '<line id="' + idprefix + 'Guide" x1="0" y1="28" x2="0" y2="218" stroke="var(--plum2)" stroke-width="1" stroke-opacity="0.5" style="opacity:0;"></line>' +
       '<circle id="' + idprefix + 'DotF" r="4" fill="#fff" stroke="var(--orchid)" stroke-width="2" style="opacity:0;"></circle>' +
       '<circle id="' + idprefix + 'DotA" r="4" fill="#fff" stroke="var(--plum)" stroke-width="2" style="opacity:0;"></circle>' +
