@@ -31,11 +31,19 @@ python3 -m http.server 8080   # then visit http://localhost:8080
 # or:  npx serve .
 ```
 
-Run the model's unit tests (pure Node, no dependencies):
+Run the tests:
 
 ```bash
-npm test        # === node test/engine.test.js
+npm test         # engine unit tests — pure Node, ZERO dependencies (11 checks)
+npm install      # (once) installs jsdom, the only dev dependency, for DOM tests
+npm run test:dom # end-to-end DOM tests in jsdom: renders every page and drives
+                 # every field through real events (20 + 56 assertions)
+npm run test:all # everything (87 checks)
 ```
+
+The DOM tests are the field-wiring guarantee: they assert that **every input
+lands at the right state key and flows to its derived output** (KPIs, chart,
+totals, variance, the actual-replaces-forecast ladder, AR→国内收款, etc.).
 
 ### 为什么没有外部依赖？(China-friendly by design)
 The original prototype loaded React, Babel **and Google Fonts** from foreign

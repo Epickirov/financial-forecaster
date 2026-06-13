@@ -119,6 +119,16 @@ test('series uses actuals (eff) while forecastCloses ignores them', function () 
   approx(fcBefore, fcAfter, 1e-6);
 });
 
+test('currentWeekIdx returns the week containing the as-of date', function () {
+  var s = fresh();
+  var ci = E.currentWeekIdx(s);
+  var wk = E.weeks(s)[ci];
+  assert.ok(s.config.asOfISO >= wk.startISO && s.config.asOfISO <= wk.endISO, 'as-of falls inside its week');
+  // the in-progress week (endISO is on/after as-of) is the first forecast week
+  assert.ok(!E.isHist(s, ci), 'current/in-progress week is a forecast week');
+  if (ci > 0) assert.ok(E.isHist(s, ci - 1), 'the week before the current one is historical');
+});
+
 // ---- formatting ----------------------------------------------------------
 test('fmt respects the 万 / 元 unit toggle', function () {
   var s = fresh();

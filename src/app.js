@@ -120,7 +120,10 @@
     var selIdx = Math.min(Math.max(S.weekIdx | 0, 0), Math.max(ser.length - 1, 0));
     var selRow = ser[selIdx] || { open: 0, cin: 0, pays: 0, close: 0, net: 0 };
     var selWk = ser[selIdx] ? ser[selIdx].w : { label: '', month: 0 };
-    var arWeekCollect = S.customers.reduce(function (s, c, ci) { return s + num(S.collect[ci + ':' + selIdx]); }, 0);
+    // dashboard "预计本周回款" = the week containing the as-of date (真正的"本周"),
+    // not whatever week is selected on another page.
+    var curW = E.currentWeekIdx(S);
+    var arWeekCollect = S.customers.reduce(function (s, c, ci) { return s + num(S.collect[ci + ':' + curW]); }, 0);
 
     var dashKpis = [
       { label: '现可用款 / 期初', val: fmt(open0), color: 'var(--plum)', sub: '财年起始余额', subColor: 'var(--muted)' },
@@ -811,6 +814,11 @@
     root.addEventListener('change', onEditEvent);
     root.addEventListener('click', onClick);
     render(store.state);
+
+    // Intentional debug/integration handle: lets you inspect state and the
+    // derived view model from the console, and is the seam the future
+    // backend code can use. Pure read access to the live store.
+    window.FFApp = { store: store, engine: E, buildView: buildView, rerender: function () { render(store.state); } };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

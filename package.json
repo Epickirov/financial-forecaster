@@ -5,8 +5,13 @@
   "description": "昆明统一生物科技有限公司 · 财务分析系统 — weekly-keyed full-year cash-flow forecaster (static, dependency-free).",
   "scripts": {
     "test": "node test/engine.test.js",
+    "test:dom": "node test/dom.smoke.test.js && node test/dom.wiring.test.js",
+    "test:all": "npm test && npm run test:dom",
     "start": "python3 -m http.server 8080",
     "serve": "python3 -m http.server 8080"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
 }

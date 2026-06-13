@@ -88,6 +88,16 @@
   }
   function weeks(state) { return genWeeks(state.config.startISO, state.config.endISO); }
 
+  // the "current" week = the one containing the as-of date (the 今天 line).
+  // Used for dashboard rollups that should mean "this week", independent of
+  // whatever week happens to be selected on another page.
+  function currentWeekIdx(state) {
+    var W = weeks(state), asOf = state.config.asOfISO;
+    for (var i = 0; i < W.length; i++) { if (asOf >= W[i].startISO && asOf <= W[i].endISO) return i; }
+    if (W.length && asOf < W[0].startISO) return 0;
+    return Math.max(W.length - 1, 0);
+  }
+
   // ---------- per-week assumptions with carry-forward ----------------------
   // latest override on week <= wIdx that defines `id`, else the base assumption.
   function effA(state, wIdx, id) {
@@ -274,7 +284,7 @@
     URGENCY_OPTIONS: URGENCY_OPTIONS, URGENCY_COLORS: URGENCY_COLORS,
     AR_CATS: AR_CATS, AR_CAT_COLORS: AR_CAT_COLORS,
     num: num,
-    genWeeks: genWeeks, weeks: weeks,
+    genWeeks: genWeeks, weeks: weeks, currentWeekIdx: currentWeekIdx,
     effA: effA, inheritedA: inheritedA, effAN: effAN,
     monthlyFrom: monthlyFrom, seedDueInWeek: seedDueInWeek, arCollectInWeek: arCollectInWeek,
     computed: computed, isHist: isHist, fcOf: fcOf, acOf: acOf, eff: eff,
