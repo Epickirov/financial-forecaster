@@ -87,7 +87,21 @@
       varStr: ser.map(function (s, i) { var f = fcCloses[i]; if (!f) return '—'; var p = (acCloses[i] - f) / Math.abs(f) * 100; return (p >= 0 ? '+' : '') + p.toFixed(1) + '%'; }),
       varCol: ser.map(function (s, i) { var f = fcCloses[i]; var p = f ? (acCloses[i] - f) / Math.abs(f) * 100 : 0; return Math.abs(p) < 0.5 ? '#8a8273' : (p >= 0 ? '#6e8348' : '#c24433'); })
     };
-    var asOfX = +xs(lastHist).toFixed(1);
+    // 今天 marker: place it at the ACTUAL as-of date, interpolated between the
+    // weekly points (each point i sits at the END of week i), rather than
+    // quantizing to the last fully-elapsed week — otherwise moving the as-of
+    // date within a week wouldn't move the line.
+    var asOfX = (function () {
+      var dayMs = 86400000, t = function (iso) { return new Date(iso + 'T00:00:00').getTime(); };
+      var cw = E.currentWeekIdx(S);                       // week containing the as-of date
+      if (!ser[cw]) return +xs(lastHist).toFixed(1);
+      var endCur = t(ser[cw].w.endISO);
+      var endPrev = cw > 0 && ser[cw - 1] ? t(ser[cw - 1].w.endISO) : t(ser[cw].w.startISO) - dayMs;
+      var g = endCur > endPrev ? (t(S.config.asOfISO) - endPrev) / (endCur - endPrev) : 1;
+      var frac = (cw - 1) + Math.max(0, Math.min(1, g));
+      frac = Math.max(0, Math.min(ser.length - 1, frac));
+      return +xs(frac).toFixed(1);
+    })();
     var yTicks = [0, 1, 2, 3].map(function (k) { var v = maxV - span * (k / 3); return { y: pt + ih * (k / 3) + 3, label: wan(v, 0) }; });
     var xTicks = ser.filter(function (_, i) { return i % Math.ceil(ser.length / 7) === 0; }).map(function (s) { return { x: +xs(s.i).toFixed(1), label: s.w.month + '月' }; });
 
