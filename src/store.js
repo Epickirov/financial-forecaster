@@ -183,7 +183,7 @@
     if (arr === 'customers') tmpl = { id: 'c_' + Math.random().toString(36).slice(2, 8), name: '新客户', cat: '国内', note: '', collectWeek: '' };
     else if (arr === 'suppliers') tmpl = { id: 'sup_' + Math.random().toString(36).slice(2, 8), name: '新供应商' };
     else if (arr === 'shipments') tmpl = { id: 'sh_' + Math.random().toString(36).slice(2, 8), type: '苗', channel: '国内', supplier: '', spec: '', qty: '', amount: '', iq: '', freight: '', freightWeek: '' };
-    else if (arr === 'payables') tmpl = { id: 'p_' + Math.random().toString(36).slice(2, 8), shipmentId: '', payWeek: '', amount: '', urgency: '三级' };
+    else if (arr === 'payables') tmpl = { id: 'p_' + Math.random().toString(36).slice(2, 8), shipmentId: '', payWeek: '', amount: '', urgency: '三级', paid: false };
     else if (arr === 'arShipments') tmpl = { id: 'as_' + Math.random().toString(36).slice(2, 8), custId: '', value: '', date: '', collectWeek: '' };
     else tmpl = { name: '新条目', amount: '', months: '' };
     if (seed) { for (var k in seed) tmpl[k] = seed[k]; }

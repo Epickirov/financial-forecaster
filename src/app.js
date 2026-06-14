@@ -251,7 +251,7 @@
       return { idx: i, id: p.id, shipmentId: p.shipmentId || '', type: m.type, channel: m.channel,
         supplier: m.supplier, spec: m.spec, iq: m.iq, qty: m.qty,
         amount: p.amount != null ? p.amount : '', amountFull: yuan0(E.payableAmt(S, p)),
-        urgency: p.urgency || '三级', uColor: E.URGENCY_COLORS[p.urgency] || 'var(--muted)',
+        urgency: p.urgency || '三级', uColor: E.URGENCY_COLORS[p.urgency] || 'var(--muted)', paid: E.payablePaid(p),
         payWeek: (p.payWeek === '' || p.payWeek == null) ? '' : parseInt(p.payWeek, 10) };
     });
     function fmtBuckets(b) {
@@ -268,6 +268,7 @@
     var bucketsMiao = fmtBuckets(E.payableBuckets(S, '苗'));
     var bucketsHua = fmtBuckets(E.payableBuckets(S, '花'));
     var freightTotal = (S.shipments || []).reduce(function (s, sh) { return s + num(sh.freight); }, 0);
+    var overdueTotal = E.overduePayables(S);
     var weeksList = ser.map(function (s) { return s.w; });
 
     var upcoming = ser.slice(selIdx, selIdx + 9).map(function (s) {
@@ -359,7 +360,7 @@
       fcstReceiptRows: fcstReceiptRows, fcstPayRows: fcstPayRows, histReceiptRows: histReceiptRows, histPayRows: histPayRows,
       revBreak: revBreak, revBreakForeign: revBreakForeign, revBreakDom: revBreakDom,
       shipmentRows: shipmentRows, supplierRows: supplierRows, supplierNames: supplierNames, payablesView: payablesView, bucketsMiao: bucketsMiao, bucketsHua: bucketsHua,
-      freightTotal: fmt(freightTotal), weeksList: weeksList, curW: curW, urgencyOptions: E.URGENCY_OPTIONS,
+      freightTotal: fmt(freightTotal), overdueWan: fmt(overdueTotal), hasOverdue: overdueTotal > 0, weeksList: weeksList, curW: curW, urgencyOptions: E.URGENCY_OPTIONS,
       upcoming: upcoming, assumeGroups: assumeGroups, rents: S.rents, fixed: S.fixed,
       custRows: custRows, arOutWan: fmt(arOut), catSummary: catSummary, catOptions: E.AR_CATS,
       repCompany: S.config.name, repFy: fy, repKpis: repKpis, repLines: repLines
@@ -775,7 +776,7 @@
     }
     var entries = V.payablesView.map(function (p) {
       var tag = (p.type === '花' ? '开花株' : '苗') + ' · ' + p.channel;
-      return '<div style="border:1px solid var(--line); border-radius:11px; padding:12px 14px; margin-bottom:10px; background:#fff;">' +
+      return '<div style="border:1px solid var(--line); border-radius:11px; padding:12px 14px; margin-bottom:10px; background:' + (p.paid ? '#f6f4ef' : '#fff') + ';' + (p.paid ? ' opacity:.72;' : '') + '">' +
         '<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">' +
           '<span style="font-size:10.5px; font-weight:700; color:#fff; background:' + (p.type === '花' ? 'var(--gold)' : 'var(--plum)') + '; padding:2px 8px; border-radius:6px;">' + esc(tag) + '</span>' +
           '<select class="fld txt" ' + bArr('payables', p.idx, 'shipmentId') + ' style="flex:1; min-width:210px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 8px; font-size:12px;">' + shipOptions(p.shipmentId) + '</select>' +
@@ -786,12 +787,14 @@
           '<div style="font-size:11px; color:var(--muted);">IQ号<div class="num" style="font-size:13px; color:var(--ink);">' + esc(p.iq || '—') + '</div></div>' +
           '<div style="font-size:11px; color:var(--muted);">应付金额(元)<input class="fld" inputmode="numeric" ' + bArr('payables', p.idx, 'amount') + ' value="' + escA(p.amount) + '" placeholder="' + escA(p.amountFull) + '" style="display:block; width:130px; text-align:right; ' + FLD + '"></div>' +
           '<div style="font-size:11px; color:var(--muted);">紧急度<select class="fld txt" ' + bArr('payables', p.idx, 'urgency') + ' style="display:block; width:82px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 4px; font-size:12px; font-weight:600; color:' + p.uColor + ';">' + opts(p.urgency) + '</select></div>' +
+          '<div style="font-size:11px; color:var(--muted);">状态<button data-action="togglePaid" data-idx="' + p.idx + '" title="标记已付：移出应付汇总并停止逾期滚入" style="display:block; margin-top:2px; border:1px solid var(--field-bd); border-radius:7px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; background:' + (p.paid ? '#e7f0e2' : '#fff') + '; color:' + (p.paid ? 'var(--leaf)' : 'var(--muted)') + ';">' + (p.paid ? '已付' : '未付') + '</button></div>' +
         '</div>' +
         '<div style="font-size:11px; color:var(--muted); margin-bottom:3px;">付款周（金色＝本周 · 绿色＝已选 · 悬停看距今 +x周）</div>' + weekPicker('payables', p.idx, 'payWeek', p.payWeek, V) +
       '</div>';
     }).join('');
 
     return '<div>' +
+      (V.hasOverdue ? '<div style="background:#fbe7e2; border:1px solid #f0cfc6; border-radius:11px; padding:11px 14px; margin-bottom:14px; font-size:12.5px; color:#a23a28;">⚠ 逾期应付合计 <b>' + esc(V.overdueWan) + '</b> — 已计入现金轨迹「已订 (AR)」线本周应付；点对应条目「已付」可移出。</div>' : '') +
       '<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">' + typeBlock('苗款', V.bucketsMiao) + typeBlock('开花株款', V.bucketsHua) + '</div>' +
       card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;"><div>' + h2('应付款登记') + '<div style="font-size:12px; color:var(--muted);">选择进货验货批次 → 应付金额（默认全额，可拆分/部分付）· 紧急度 · 付款周</div></div>' +
         '<button data-action="addRow" data-arr="payables" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer;">+ 新增应付款</button></div>' +
@@ -1012,6 +1015,7 @@
       case 'delRow': store.delRow(btn.dataset.arr, +btn.dataset.idx); break;
       case 'addAssume': store.addAssumeItem(btn.dataset.group); break;
       case 'delCustom': store.delCustom(btn.dataset.id); break;
+      case 'togglePaid': { var pp = store.state.payables[+btn.dataset.idx]; if (pp) store.editArr('payables', +btn.dataset.idx, 'paid', !pp.paid); break; }
       case 'print': window.print(); break;
       case 'logout': doLogout(); break;
       case 'authToggle': e.preventDefault(); authTab = (authTab === 'signup' ? 'login' : 'signup'); authError = ''; renderAuth(); break;

@@ -143,13 +143,27 @@
     return sh ? num(sh.amount) : 0;
   }
   function payWeekOf(p) { var w = parseInt(p.payWeek, 10); return isNaN(w) ? null : w; }
+  // a payable marked 已付 has transitioned AP → Paid: it leaves the outstanding
+  // buckets and no longer rolls forward as a live obligation.
+  function payablePaid(p) { return !!(p && (p.paid === true || p.paid === 'true')); }
 
-  // total payables due in a given week (optionally filtered by 苗/花)
+  // total OUTSTANDING (unpaid) payables due in a given week (optionally filtered by 苗/花)
   function dueInWeek(state, wIdx, type) {
     return (state.payables || []).reduce(function (s, p) {
+      if (payablePaid(p)) return s;
       if (payWeekOf(p) !== wIdx) return s;
       if (type && payableMeta(state, p).type !== type) return s;
       return s + payableAmt(state, p);
+    }, 0);
+  }
+  // 逾期应付: unpaid payables whose 付款周 is already behind the as-of week. They
+  // are still owed, so the forward (committed) cash line rolls them into the
+  // current week rather than leaving them stranded in a past bucket.
+  function overduePayables(state) {
+    var cw = currentWeekIdx(state);
+    return (state.payables || []).reduce(function (s, p) {
+      var w = payWeekOf(p);
+      return (w != null && w < cw && !payablePaid(p)) ? s + payableAmt(state, p) : s;
     }, 0);
   }
   // shipment freight (物流成本) charged to the cash flow in the week it is paid
@@ -177,6 +191,7 @@
       BUCKETS.forEach(function (b) { out[ch][b] = {}; out[ch]._t[b] = 0; URGENCY_OPTIONS.forEach(function (u) { out[ch][b][u] = 0; }); });
     });
     (state.payables || []).forEach(function (p) {
+      if (payablePaid(p)) return;
       var m = payableMeta(state, p); if (type && m.type !== type) return;
       var ch = m.channel; if (!out[ch]) return;
       var amt = payableAmt(state, p), u = URGENCY_OPTIONS.indexOf(p.urgency) >= 0 ? p.urgency : '三级', w = payWeekOf(p);
@@ -388,10 +403,12 @@
     if (horizon < cw) return out;                          // no forward bookings → no committed line
     var branch = cw > 0 ? cw - 1 : 0;
     var bal = cw > 0 ? ser[cw - 1].close : num(state.config.openingBalance);
+    var overdue = overduePayables(state);                  // 逾期应付 — owed now, rolled into the current week
     out[branch] = bal;
     for (var i = cw; i <= horizon && i < W.length; i++) {
       var ar = arDueInWeek(state, i);
       var pays = PAYCATS.reduce(function (s, c) { return s + fcPayOf(state, i, c); }, 0);
+      if (i === cw) pays += overdue;
       bal = bal + (ar.foreign + ar.domestic) - pays;
       out[i] = bal;
     }
@@ -435,7 +452,7 @@
     genWeeks: genWeeks, weeks: weeks, currentWeekIdx: currentWeekIdx,
     effA: effA, inheritedA: inheritedA, effAN: effAN, monthlyFrom: monthlyFrom,
     shipmentById: shipmentById, shipUnit: shipUnit, payableMeta: payableMeta, payableAmt: payableAmt,
-    payWeekOf: payWeekOf, dueInWeek: dueInWeek, freightDueInWeek: freightDueInWeek,
+    payWeekOf: payWeekOf, payablePaid: payablePaid, dueInWeek: dueInWeek, overduePayables: overduePayables, freightDueInWeek: freightDueInWeek,
     lastWeekOfMonth: lastWeekOfMonth, payableBuckets: payableBuckets, salesReceipts: salesReceipts,
     customerOutstanding: customerOutstanding, arDueInWeek: arDueInWeek,
     customerById: customerById, weekIdxOf: weekIdxOf, arLag: arLag, arCollectWeek: arCollectWeek, AR_LAG_KEY: AR_LAG_KEY, AR_LAG_DEFAULT: AR_LAG_DEFAULT,
