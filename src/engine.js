@@ -73,15 +73,19 @@
 
   // ---------- week grid ----------------------------------------------------
   function genWeeks(startISO, endISO) {
+    // Treat fiscal dates as plain CALENDAR dates and parse/format ENTIRELY in UTC,
+    // so the week grid never shifts with the viewer's device timezone. (The as-of
+    // date is computed in China time; if weeks were parsed in local time, a non-UTC
+    // viewer — e.g. Beijing UTC+8 — would see the grid and the 今日 marker off by a day.)
     var iso = function (d) { return d.toISOString().slice(0, 10); };
-    var md = function (d) { return (d.getMonth() + 1) + '.' + d.getDate(); };
-    var start = new Date(startISO + 'T00:00:00'), end = new Date(endISO + 'T00:00:00');
+    var md = function (d) { return (d.getUTCMonth() + 1) + '.' + d.getUTCDate(); };
+    var start = new Date(startISO + 'T00:00:00Z'), end = new Date(endISO + 'T00:00:00Z');
     var weeks = [], cur = new Date(start), i = 0;
     while (cur <= end && i < 60) {
-      var ws = new Date(cur), we = new Date(cur); we.setDate(we.getDate() + 6);
+      var ws = new Date(cur), we = new Date(cur); we.setUTCDate(we.getUTCDate() + 6);
       if (we > end) we.setTime(end.getTime());
-      weeks.push({ idx: i, startISO: iso(ws), endISO: iso(we), label: md(ws) + '–' + md(we), month: ws.getMonth() + 1 });
-      cur.setDate(cur.getDate() + 7); i++;
+      weeks.push({ idx: i, startISO: iso(ws), endISO: iso(we), label: md(ws) + '–' + md(we), month: ws.getUTCMonth() + 1 });
+      cur.setUTCDate(cur.getUTCDate() + 7); i++;
     }
     return weeks;
   }

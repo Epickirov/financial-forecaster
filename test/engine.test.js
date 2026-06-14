@@ -38,6 +38,41 @@ test('genWeeks covers the fiscal year as ~50 weekly buckets', function () {
   assert.strictEqual(w[0].idx, 0);
 });
 
+test('genWeeks startISO is consistent with its label (no UTC/local drift)', function () {
+  E.genWeeks('2026-02-17', '2027-02-05').forEach(function (x) {
+    var d = x.startISO.split('-');                       // YYYY-MM-DD
+    assert.strictEqual(x.label.split('–')[0], (+d[1]) + '.' + (+d[2]), 'label start matches startISO for ' + x.startISO);
+  });
+});
+
+test('genWeeks is timezone-independent — Beijing (UTC+8) sees the same calendar weeks', function () {
+  var cp = require('child_process'), path = require('path');
+  var script = 'var E=require(' + JSON.stringify(path.resolve(__dirname, '../src/engine.js')) +
+    ');var w=E.genWeeks("2026-02-17","2027-02-05");process.stdout.write(w[0].startISO+"|"+w[0].label);';
+  var out = cp.execFileSync(process.execPath, ['-e', script], { env: Object.assign({}, process.env, { TZ: 'Asia/Shanghai' }) }).toString().split('|');
+  assert.strictEqual(out[0], '2026-02-17', 'week 0 startISO unaffected by Asia/Shanghai timezone');
+  assert.strictEqual(out[1].split('–')[0], '2.17', 'label matches startISO under Asia/Shanghai');
+});
+
+// ---- 今日/截至 tracks the real (China) date unless pinned --------------------
+test('asOfISO defaults to China today, refreshes on load, and pins once edited', function () {
+  var today = FFStore.todayISO();
+  assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(today), 'todayISO is a valid YYYY-MM-DD');
+  var d = FFStore.defaultModel();
+  assert.strictEqual(d.config.asOfISO, today, 'fresh model as-of = China today');
+  assert.strictEqual(d.config.asOfManual, false, 'fresh model is not pinned');
+  // a saved (unpinned) workspace with a stale as-of refreshes to today on load
+  var noop = function () {};
+  var adapter = { load: function () { return { config: { asOfISO: '2020-01-01' } }; }, save: noop, clear: noop };
+  var s1 = new FFStore.Store(adapter);
+  assert.strictEqual(s1.state.config.asOfISO, today, 'unpinned stale as-of refreshes to today');
+  // editing 截至 pins it; a pinned value is preserved on load
+  s1.editConfig('asOfISO', '2026-03-15');
+  assert.strictEqual(s1.state.config.asOfManual, true, 'editing 截至 pins it');
+  var adapter2 = { load: function () { return { config: { asOfISO: '2026-03-15', asOfManual: true } }; }, save: noop, clear: noop };
+  assert.strictEqual(new FFStore.Store(adapter2).state.config.asOfISO, '2026-03-15', 'pinned as-of preserved on load');
+});
+
 // ---- assumption carry-forward -------------------------------------------
 test('effA carries the latest override forward, inheritedA looks strictly before', function () {
   var s = fresh();

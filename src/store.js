@@ -41,7 +41,7 @@
     return {
       page: 'dash',
       weekIdx: 0,
-      config: { name: '昆明统一生物', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: todayISO(), unit: '万', openingBalance: '' },
+      config: { name: '昆明统一生物', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: todayISO(), asOfManual: false, unit: '万', openingBalance: '' },
       assume: {
         priceForLarge: '', priceForSmall: '', priceForDye: '', priceForCut: '',
         priceDomLarge: '', priceDomSmall: '', priceDomDye: '', priceDomCut: '',
@@ -144,6 +144,8 @@
     if (!saved) return d;
     var merged = Object.assign({}, d, saved);
     merged.config = Object.assign({}, d.config, saved.config || {}); // guard new config keys
+    // 今日/截至 tracks the real current date (China time) unless the user pinned it
+    if (!merged.config.asOfManual) merged.config.asOfISO = todayISO();
     return merged;
   };
 
@@ -168,7 +170,14 @@
   Store.prototype.editMap = function (map, key, val) {
     var m = Object.assign({}, this.state[map]); m[key] = val; this.state[map] = m; this._notify();
   };
-  Store.prototype.editConfig = function (key, val) { this.editMap('config', key, val); };
+  Store.prototype.editConfig = function (key, val) {
+    // editing 截至 pins it: from now on it stays put instead of tracking today
+    if (key === 'asOfISO') {
+      var c = Object.assign({}, this.state.config); c.asOfISO = val; c.asOfManual = true;
+      this.state.config = c; this._notify(); return;
+    }
+    this.editMap('config', key, val);
+  };
 
   // array editors: state[arr][idx][key] = val
   Store.prototype.editArr = function (arr, idx, key, val) {
@@ -218,7 +227,7 @@
     this.state = defaultModel(); this._notify();
   };
 
-  var api = { Store: Store, LocalStorageAdapter: LocalStorageAdapter, RemoteAdapter: RemoteAdapter, defaultModel: defaultModel, STORAGE_KEY: STORAGE_KEY };
+  var api = { Store: Store, LocalStorageAdapter: LocalStorageAdapter, RemoteAdapter: RemoteAdapter, defaultModel: defaultModel, todayISO: todayISO, STORAGE_KEY: STORAGE_KEY };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else global.FFStore = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -98,7 +98,7 @@
     // quantizing to the last fully-elapsed week — otherwise moving the as-of
     // date within a week wouldn't move the line.
     var asOfX = (function () {
-      var dayMs = 86400000, t = function (iso) { return new Date(iso + 'T00:00:00').getTime(); };
+      var dayMs = 86400000, t = function (iso) { return new Date(iso + 'T00:00:00Z').getTime(); };
       var cw = E.currentWeekIdx(S);                       // week containing the as-of date
       if (!ser[cw]) return +xs(lastHist).toFixed(1);
       var endCur = t(ser[cw].w.endISO);
@@ -1283,6 +1283,8 @@
     if (!s || typeof s !== 'object') return d;
     var merged = Object.assign({}, d, s);
     merged.config = Object.assign({}, d.config, s.config || {}); // guard new config keys
+    // 今日/截至 tracks the real current date (China time) unless the user pinned it
+    if (!merged.config.asOfManual) merged.config.asOfISO = FFStore.todayISO();
     // migration guards (older saved states): ensure customer ids + new arrays
     merged.customers = (merged.customers || []).map(function (c) {
       return c && c.id ? c : Object.assign({ id: 'c_' + Math.random().toString(36).slice(2, 8) }, c);
