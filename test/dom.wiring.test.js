@@ -51,8 +51,9 @@ nav('assume');
 const cases = [
   ['priceForLarge', '30', s => E.computed(s, W).foreign, 'up'],
   ['defectRate', '0.5', s => E.computed(s, W).foreign, 'down'],   // more culling → less sellable
-  ['collectInMonth', '0.1', s => E.computed(s, W)._domSales, 'down'],
   ['qtyDomLarge', '999999', s => E.computed(s, W).domestic, 'up'],
+  ['qtyDomCut', '999999', s => E.computed(s, W).domestic, 'up'],   // 国内切花 now feeds 国内收款
+  ['collectInWeek', '2', s => E.computed(s, W).domestic, 'up'],    // 当周回款率 multiplies 销售收款
   ['seedlingMonthly', '500000', s => E.computed(s, W).seedling, 'up'],
   ['seedlingPrice', '99', s => E.computed(s, W).seedling, 'up'],
   ['pkgCost', '50', s => E.computed(s, W).materials, 'up'],

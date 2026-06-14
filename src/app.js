@@ -214,24 +214,24 @@
 
     // ---- revenue breakdown (收款测算) with the AR-collection line ----
     var c0 = E.computed(S, selIdx);
-    var keep = c0._keep, collectRate = c0._collectRate;
+    var keep = c0._keep;
     var gA = function (id) { return E.effAN(S, selIdx, id); };
     function rb(qid, pid) { var qW = gA(qid) * keep; return { qty: Math.round(qW).toLocaleString('zh-CN'), price: gA(pid), amt: yuan0(qW * gA(pid)) }; }
-    var domGrossW = c0._domGross;
     var revBreak = {
       defect: (gA('defectRate') * 100).toFixed(1) + '%',
-      forLarge: rb('qtyForLarge', 'priceForLarge'), forSmall: rb('qtyForSmall', 'priceForSmall'),
-      domLarge: rb('qtyDomLarge', 'priceDomLarge'), domSmall: rb('qtyDomSmall', 'priceDomSmall'),
-      dye: rb('qtyDye', 'priceDye'), cut: rb('qtyCut', 'priceCut'),
-      collectRate: (collectRate * 100).toFixed(0) + '%',
-      domGross: yuan0(domGrossW),
-      domSales: fmt(c0._domSales),         // collection from new sales
-      arCollect: fmt(c0._arCollect),       // collection of old receivables (from 应收账款 page)
+      collectRate: (gA('collectInWeek') * 100).toFixed(0) + '%',
+      forLarge: rb('qtyForLarge', 'priceForLarge'), forSmall: rb('qtyForSmall', 'priceForSmall'), forDye: rb('qtyForDye', 'priceForDye'), forCut: rb('qtyForCut', 'priceForCut'),
+      domLarge: rb('qtyDomLarge', 'priceDomLarge'), domSmall: rb('qtyDomSmall', 'priceDomSmall'), domDye: rb('qtyDomDye', 'priceDomDye'), domCut: rb('qtyDomCut', 'priceDomCut'),
+      foreignGross: yuan0(c0._foreignGross), domGross: yuan0(c0._domGross),
+      foreignSales: fmt(c0._foreignSales),  // 国外销售收款 (× 当周回款率)
+      domSales: fmt(c0._domSales),          // 国内销售收款 (× 当周回款率)
+      arCollect: fmt(c0._arCollect),        // 应收账款本周回款 (国内)
+      arForeign: fmt(c0._arForeign),        // 应收账款本周回款 (国外)
       foreignTotal: fmt(E.fcOf(S, selIdx, 'foreign')),
       domesticTotal: fmt(E.fcOf(S, selIdx, 'domestic'))
     };
-    var revBreakForeign = [merge({ label: '国外大花 3.5/3.8寸' }, revBreak.forLarge), merge({ label: '国外小花 2.8/3.0寸' }, revBreak.forSmall)];
-    var revBreakDom = [merge({ label: '国内大花 3.5/3.8寸' }, revBreak.domLarge), merge({ label: '国内小花 2.8/3.0寸' }, revBreak.domSmall), merge({ label: '染色花' }, revBreak.dye), merge({ label: '切花' }, revBreak.cut)];
+    var revBreakForeign = [merge({ label: '国外大花 3.5/3.8寸' }, revBreak.forLarge), merge({ label: '国外小花 2.8/3.0寸' }, revBreak.forSmall), merge({ label: '国外染色花' }, revBreak.forDye), merge({ label: '国外切花' }, revBreak.forCut)];
+    var revBreakDom = [merge({ label: '国内大花 3.5/3.8寸' }, revBreak.domLarge), merge({ label: '国内小花 2.8/3.0寸' }, revBreak.domSmall), merge({ label: '国内染色花' }, revBreak.domDye), merge({ label: '国内切花' }, revBreak.domCut)];
 
     // ---- shipments (进货验货) / payables (苗·花应付款) / logistics ----------
     var shipmentRows = (S.shipments || []).map(function (sh, i) {
@@ -285,9 +285,9 @@
       });
     }
     var assumeGroups = [
-      { gid: 'price', title: '销售单价', desc: '每株价格', sym: '¥', fields: [fld('priceForLarge', '国外大花 3.5/3.8寸', '元/株'), fld('priceForSmall', '国外小花 2.8/3.0寸', '元/株'), fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3.0寸', '元/株'), fld('priceDye', '染色花', '元/株'), fld('priceCut', '切花', '元/株')], custom: grpCustom('price') },
-      { gid: 'collect', title: '回款节奏', desc: '当月与次月回款比例', sym: '%', fields: [fld('collectInMonth', '当月回款率', '比例', '0.7 = 70%'), fld('collectPrior', '次月回款率', '比例', '0.3 = 30%')], custom: grpCustom('collect') },
-      { gid: 'volume', title: '销量与淘汰', desc: '各渠道周销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花 3.5/3.8寸', '株/周'), fld('qtyForSmall', '国外小花 2.8/3.0寸', '株/周'), fld('qtyDomLarge', '国内大花 3.5/3.8寸', '株/周'), fld('qtyDomSmall', '国内小花 2.8/3.0寸', '株/周'), fld('qtyDye', '染色花', '株/周'), fld('qtyCut', '切花', '株/周'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
+      { gid: 'price', title: '销售单价', desc: '每株价格', sym: '¥', fields: [fld('priceForLarge', '国外大花 3.5/3.8寸', '元/株'), fld('priceForSmall', '国外小花 2.8/3.0寸', '元/株'), fld('priceForDye', '国外染色花', '元/株'), fld('priceForCut', '国外切花', '元/株'), fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3.0寸', '元/株'), fld('priceDomDye', '国内染色花', '元/株'), fld('priceDomCut', '国内切花', '元/株')], custom: grpCustom('price') },
+      { gid: 'collect', title: '回款节奏', desc: '当周销售收款比例', sym: '%', fields: [fld('collectInWeek', '当周回款率', '比例', '0.7 = 当周收回 70%')], custom: grpCustom('collect') },
+      { gid: 'volume', title: '销量与淘汰', desc: '各渠道周销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花 3.5/3.8寸', '株/周'), fld('qtyForSmall', '国外小花 2.8/3.0寸', '株/周'), fld('qtyForDye', '国外染色花', '株/周'), fld('qtyForCut', '国外切花', '株/周'), fld('qtyDomLarge', '国内大花 3.5/3.8寸', '株/周'), fld('qtyDomSmall', '国内小花 2.8/3.0寸', '株/周'), fld('qtyDomDye', '国内染色花', '株/周'), fld('qtyDomCut', '国内切花', '株/周'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
       { gid: 'seed', title: '种苗采购', desc: '每月进苗与成本', sym: '❀', fields: [fld('seedlingMonthly', '月进苗株数', '株/月'), fld('seedlingPrice', '种苗平均单价', '元/株')], custom: grpCustom('seed') },
       { gid: 'material', title: '生产物料成本', desc: '每株物料成本', sym: '▦', fields: [fld('pkgCost', '包装材料', '元/株'), fld('prodCost', '生产材料', '元/株')], custom: grpCustom('material') },
       { gid: 'opex', title: '人工 · 水电 · 运费 · 其他', desc: '每月固定运营支出', sym: '⚙', fields: [fld('payrollMonthly', '工资社保税费', '元/月'), fld('utilitiesMonthly', '水电费', '元/月'), fld('freightMonthly', '运费', '元/月'), fld('projectsMonthly', '项目及工程', '元/月'), fld('travelWeekly', '差旅招待（每周）', '元/周'), fld('loanMonthly', '房贷/借款', '元/月')], custom: grpCustom('opex') }
@@ -627,13 +627,16 @@
           '<div style="font-size:11.5px; color:var(--muted); margin-top:12px;">提示：预测金额由「假设」页的命名因子驱动（单价、回款率、销量、淘汰率、成本、租金计划等）。修改对应周的假设，此处实时更新。</div>') +
       '</div>' +
       card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' + h2('收款测算 · ' + V.selWeekLabel + '（每周 · 元）') + '<span style="font-size:11.5px; color:var(--gold); background:#f6edda; padding:4px 10px; border-radius:7px;">已扣除预测淘汰率 ' + esc(V.revBreak.defect) + '</span></div>' +
-        '<div style="font-size:12px; color:var(--muted); margin-bottom:16px;">数量 × 单价 → 国外 / 国内 收款（国内再乘回款率 ' + esc(V.revBreak.collectRate) + '，并叠加应收账款本周回款）</div>' +
+        '<div style="font-size:12px; color:var(--muted); margin-bottom:16px;">数量 × 单价 → 国外 / 国内 收款（各渠道大花 + 小花 + 染色花 + 切花，再 × 当周回款率，并叠加应收账款本周回款）</div>' +
         '<div style="display:grid; grid-template-columns:1fr 1.4fr; gap:22px;">' +
           '<div><div style="font-size:13px; font-weight:700; color:var(--gold); margin-bottom:10px;">国外收款</div>' + foreign +
-            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid var(--line);"><span style="font-size:13px; font-weight:700;">国外收款合计</span><span class="num" style="font-size:16px; font-weight:700; color:var(--gold);">' + esc(V.revBreak.foreignTotal) + '</span></div></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted);"><span>国外毛收入小计</span><span class="num">' + esc(V.revBreak.foreignGross) + '</span></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>× 当周回款率 ' + esc(V.revBreak.collectRate) + ' = 销售收款</span><span class="num">' + esc(V.revBreak.foreignSales) + '</span></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>＋ 本周应收账款回款</span><span class="num">' + esc(V.revBreak.arForeign) + '</span></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:10px; border-top:1px solid var(--line);"><span style="font-size:13px; font-weight:700;">国外收款合计</span><span class="num" style="font-size:16px; font-weight:700; color:var(--gold);">' + esc(V.revBreak.foreignTotal) + '</span></div></div>' +
           '<div><div style="font-size:13px; font-weight:700; color:var(--plum); margin-bottom:10px;">国内收款</div>' + dom +
             '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted);"><span>国内毛收入小计</span><span class="num">' + esc(V.revBreak.domGross) + '</span></div>' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>× 回款率 ' + esc(V.revBreak.collectRate) + ' = 销售回款</span><span class="num">' + esc(V.revBreak.domSales) + '</span></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>× 当周回款率 ' + esc(V.revBreak.collectRate) + ' = 销售收款</span><span class="num">' + esc(V.revBreak.domSales) + '</span></div>' +
             '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>＋ 本周应收账款回款</span><span class="num">' + esc(V.revBreak.arCollect) + '</span></div>' +
             '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:10px; border-top:1px solid var(--line);"><span style="font-size:13px; font-weight:700;">国内收款合计</span><span class="num" style="font-size:16px; font-weight:700; color:var(--plum);">' + esc(V.revBreak.domesticTotal) + '</span></div></div>' +
         '</div>', ' margin-top:16px;') +

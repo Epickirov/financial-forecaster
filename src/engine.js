@@ -225,22 +225,21 @@
     var g = function (id) { return effAN(state, wIdx, id); };
     var keep = 1 - g('defectRate'); // 预测淘汰率 reduces sellable quantity
 
-    var qFL = g('qtyForLarge') * keep, qFS = g('qtyForSmall') * keep;
-    var qDL = g('qtyDomLarge') * keep, qDS = g('qtyDomSmall') * keep,
-        qDye = g('qtyDye') * keep, qCut = g('qtyCut') * keep;
-    var totalQ = qFL + qFS + qDL + qDS + qDye + qCut;
+    var qFL = g('qtyForLarge') * keep, qFS = g('qtyForSmall') * keep, qFDye = g('qtyForDye') * keep, qFCut = g('qtyForCut') * keep;
+    var qDL = g('qtyDomLarge') * keep, qDS = g('qtyDomSmall') * keep, qDDye = g('qtyDomDye') * keep, qDCut = g('qtyDomCut') * keep;
+    var totalQ = qFL + qFS + qFDye + qFCut + qDL + qDS + qDDye + qDCut;
     var volW = totalQ;                                      // 销量 entered as 株/周 (weekly)
 
-    // revenue by channel × size → 国外 / 国内 collection (weekly)
-    var foreignWeekly = qFL * g('priceForLarge') + qFS * g('priceForSmall');
-    var domWeekly = qDL * g('priceDomLarge') + qDS * g('priceDomSmall') +
-                    qDye * g('priceDye') + qCut * g('priceCut');
-    var collectRate = g('collectInMonth') + g('collectPrior');
+    // 收款 = (大花+小花+染色花+切花) per channel × weekly qty × 当周回款率; AR adds on top.
+    var foreignGross = qFL * g('priceForLarge') + qFS * g('priceForSmall') + qFDye * g('priceForDye') + qFCut * g('priceForCut');
+    var domGross = qDL * g('priceDomLarge') + qDS * g('priceDomSmall') + qDDye * g('priceDomDye') + qDCut * g('priceDomCut');
+    var collectWeek = g('collectInWeek');                  // 当周回款率
 
     var arDue = arDueInWeek(state, wIdx);                   // 应收账款 collected this week (国外 / 国内)
-    var foreign = foreignWeekly + arDue.foreign;
-    var domSales = domWeekly * collectRate;                 // collection from NEW sales (weekly)
-    var arCollect = arDue.domestic;                         // 应收账款 → 国内收款
+    var foreignSales = foreignGross * collectWeek;
+    var domSales = domGross * collectWeek;
+    var foreign = foreignSales + arDue.foreign;
+    var arCollect = arDue.domestic;                         // 应收账款 → 国内收款 (separate line)
     var domestic = domSales + arCollect;
 
     // 苗款 / 开花株款: scheduled payables due this week (from the register), else assumption baseline
@@ -266,7 +265,7 @@
       payroll: payroll, utilrent: utilrent, projects: projects, materials: materials,
       travel: travel, loan: loan, custom: custom,
       // breakdown helpers (not part of the cash spine, used by 收款测算)
-      _domSales: domSales, _arCollect: arCollect, _arForeign: arDue.foreign, _domGross: domWeekly, _collectRate: collectRate, _keep: keep
+      _domSales: domSales, _foreignSales: foreignSales, _arCollect: arCollect, _arForeign: arDue.foreign, _domGross: domGross, _foreignGross: foreignGross, _collectWeek: collectWeek, _keep: keep
     };
   }
 
