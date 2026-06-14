@@ -385,7 +385,6 @@
         '<nav style="display:flex; align-items:center; justify-content:center; gap:2px; flex:1; margin:0 8px; flex-wrap:nowrap; overflow-x:auto;">' + nav + '</nav>' +
         '<div style="display:flex; align-items:center; gap:8px; flex:none;">' +
           (currentUser && currentUser.email ? '<span title="' + escA(currentUser.email) + '" style="font-size:11px; color:var(--muted); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(currentUser.email) + '</span>' : '') +
-          '<button data-action="reset" style="background:#fbf6ee; border:1px solid var(--line); color:var(--muted); font-size:11.5px; padding:7px 12px; border-radius:8px; cursor:pointer;">重置数据</button>' +
           '<button data-action="logout" style="background:#fff; border:1px solid var(--field-bd); color:var(--plum2); font-size:11.5px; padding:7px 12px; border-radius:8px; cursor:pointer;">退出</button>' +
         '</div>' +
       '</header>' +
@@ -978,7 +977,6 @@
     var a = btn.dataset.action;
     switch (a) {
       case 'nav': store.setPage(btn.dataset.page); break;
-      case 'reset': if (confirm('确定重置所有数据？此操作不可撤销。')) store.reset(); break;
       case 'toggleUnit': store.toggleUnit(); break;
       case 'selectWeek': store.selectWeek(+btn.dataset.idx); break;
       case 'pickWeek': store.editArr(btn.dataset.arr, +btn.dataset.idx, btn.dataset.key, +btn.dataset.week); break;
