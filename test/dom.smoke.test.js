@@ -85,6 +85,7 @@ ok(true, 're-render after selecting a future week did not throw');
 // 7b) interactive tutorial covers every data-entry page with field highlighting
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'tut'));
 ok(app.innerHTML.includes('三步看懂') && app.innerHTML.includes('高亮'), 'tutorial page renders with stage guides + highlight buttons');
+ok(['Forecast Data', '应收账款', 'Accounts Payable', '历史数据', '预测数据'].every(s => app.innerHTML.includes(s)), 'glossary defines FD/AR/AP/HD in Chinese + English');
 click([...app.querySelectorAll('[data-action="tutSelect"]')].find(b => b.dataset.stage === 'ar'));
 ok(app.innerHTML.includes('苗/花应付款') && app.innerHTML.includes('物流成本'), 'AR stage covers 应收 + 应付 (苗/花应付款 + 物流成本)');
 click([...app.querySelectorAll('[data-action="tutHi"]')].find(b => b.dataset.stage === 'ap'));

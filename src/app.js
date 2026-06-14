@@ -932,7 +932,7 @@
   // that page and glows the matching inputs (CSS in styles.css, keyed on data-tut).
   var TUT = {
     hd: {
-      label: '已结算 · 事实', color: 'var(--plum)',
+      label: '已结算 · 事实', cn: '历史数据', color: 'var(--plum)',
       what: '已经发生、而且钱已经收到或付出的交易——事实，不会再变，就像银行流水。',
       lifecycle: '收钱和付钱都在「历史数据」以“实际”录入。',
       hooks: '现金轨迹【实线】，以及报告里的【已实现（事实）】列。',
@@ -947,7 +947,7 @@
       ]
     },
     ar: {
-      label: '已订 · 待结算', color: '#3f8f6b',
+      label: '已订 · 待结算', cn: '应收账款 / 应付账款', color: '#3f8f6b',
       what: '已经定下来、但还没结算的钱：货已发出待收款（应收），或货已订/已到待付款（应付）。金额已知，只差“何时”结算。',
       lifecycle: '应收（要收的钱）和应付（要付的货款、运费）都在这一阶段登记。',
       hooks: '应收→绿色点线“已订(AR)”+报告【应收】列；应付/运费→现金轨迹支出（逾期未付会滚入本周）。',
@@ -971,7 +971,7 @@
       ]
     },
     fd: {
-      label: '未发货 · 预测', color: 'var(--orchid)',
+      label: '未发货 · 预测', cn: '预测数据', color: 'var(--orchid)',
       what: '还没发生的销售与支出。金额和时间都要预测，系统按“单价 × 销量 × 当周回款率”自动算出预计收款。',
       lifecycle: '先在「假设」设定驱动因子，再到「预测」看结果、按需逐周覆盖。',
       hooks: '橙色点线“预测(FD)”贯穿全年，以及报告里的【预测】列。',
@@ -1011,7 +1011,8 @@
       var x = TUT[k], on = k === stage;
       return '<button data-action="tutSelect" data-stage="' + k + '" style="flex:1; cursor:pointer; text-align:left; border:1px solid ' + (on ? x.color : 'var(--line)') + '; background:' + (on ? x.color : '#fff') + '; color:' + (on ? '#fff' : 'var(--ink)') + '; border-radius:12px; padding:13px 14px; box-shadow:' + (on ? '0 8px 20px -12px ' + x.color : 'none') + ';">' +
         '<div class="num" style="font-size:16px; font-weight:700;">' + k.toUpperCase() + '</div>' +
-        '<div style="font-size:11px; opacity:.9; margin-top:2px;">' + esc(x.label) + '</div></button>';
+        '<div style="font-size:11.5px; font-weight:600; margin-top:2px;">' + esc(x.cn) + '</div>' +
+        '<div style="font-size:10.5px; opacity:.85; margin-top:1px;">' + esc(x.label) + '</div></button>';
     }).join('');
     var steps = t.steps.map(function (st, i) {
       return '<div style="border:1px solid var(--line); border-radius:11px; padding:12px 14px; margin-bottom:12px; background:#fffdf8;">' +
@@ -1025,9 +1026,16 @@
       card('<div class="serif" style="font-size:18px; font-weight:700; margin-bottom:6px;">三步看懂这套系统</div>' +
         '<div style="font-size:13px; color:#3a342a; line-height:1.75;">每一笔生意像水一样从“预测”流到“收到/付出”：<br>' +
         '<b style="color:var(--orchid);">FD 预测</b>（还没发货）→ <b style="color:#3f8f6b;">AR 已订</b>（已登记、等结算）→ <b style="color:var(--plum);">HD 已结算</b>（钱到账/付清）。<br>' +
-        '收钱和付钱都走这三步。点下面任意一块，看它每个页面怎么填、连到哪里。</div>', ' margin-bottom:16px;') +
+        '收钱和付钱都走这三步。点下面任意一块，看它每个页面怎么填、连到哪里。</div>' +
+        '<div style="margin-top:12px; padding:12px 14px; background:#faf6ee; border-radius:10px; font-size:12.5px; color:#3a342a; line-height:1.95;">' +
+          '<b>这些英文字母是什么意思？</b>（都是英文财务术语的缩写）<br>' +
+          '<b style="color:var(--orchid);">FD</b> ＝ Forecast Data · <b>预测数据</b> —— 还没发生、需要预测的销售与支出。<br>' +
+          '<b style="color:#3f8f6b;">AR</b> ＝ Accounts Receivable · <b>应收账款</b> —— 货已发出、钱还没收到（要<b>收</b>的钱）。<br>' +
+          '<b style="color:#3f8f6b;">AP</b> ＝ Accounts Payable · <b>应付账款</b> —— 货已订/已到、钱还没付出（要<b>付</b>的钱）。<br>' +
+          '<b style="color:var(--plum);">HD</b> ＝ Historical Data · <b>历史数据</b> —— 钱已经收到或付出，已成事实。' +
+        '</div>', ' margin-bottom:16px;') +
       '<div style="display:flex; gap:12px; margin-bottom:16px;">' + sel + '</div>' +
-      card('<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;"><span style="width:11px; height:11px; border-radius:50%; background:' + t.color + ';"></span><div class="serif" style="font-size:17px; font-weight:700;">' + stage.toUpperCase() + ' · ' + esc(t.label) + '</div></div>' +
+      card('<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;"><span style="width:11px; height:11px; border-radius:50%; background:' + t.color + ';"></span><div class="serif" style="font-size:17px; font-weight:700;">' + stage.toUpperCase() + ' · ' + esc(t.cn) + '<span style="font-size:12.5px; font-weight:500; color:var(--muted);">（' + esc(t.label) + '）</span></div></div>' +
         '<div style="font-size:13.5px; color:#3a342a; line-height:1.7; margin-bottom:6px;"><b>是什么：</b>' + esc(t.what) + '</div>' +
         '<div style="font-size:13px; color:#3a342a; margin-bottom:14px;"><b>怎么用：</b>' + esc(t.lifecycle) + '</div>' +
         steps +
