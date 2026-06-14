@@ -76,3 +76,17 @@ summary::marker{ content:''; }
   .print-area{ box-shadow:none!important; }
   body{ background:#fff; }
 }
+
+/* ---- interactive tutorial: glow the fields for the selected stage -------- */
+@keyframes tutPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(181,134,47,0); } 50%{ box-shadow:0 0 0 5px rgba(181,134,47,.30); } }
+#app[data-tut="hd"] input[data-map="sales"][data-key$="amt"],
+#app[data-tut="hd"] input[data-map="actual"],
+#app[data-tut="ar"] input[data-arr="arShipments"][data-key="value"],
+#app[data-tut="ar"] input[data-arr="arShipments"][data-key="date"],
+#app[data-tut="ar"] select[data-arr="customers"][data-key="cat"],
+#app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="price"],
+#app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="qty"],
+#app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="collectInWeek"]{
+  outline:2px solid var(--gold); outline-offset:1px; border-radius:7px;
+  background:#fffaf0!important; animation:tutPulse 1.8s ease-in-out infinite;
+}

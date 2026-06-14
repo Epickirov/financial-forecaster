@@ -82,6 +82,16 @@ ok(chipsBtns.length > 0, 'forecast week chips present');
 click(chipsBtns[chipsBtns.length - 1]);
 ok(true, 're-render after selecting a future week did not throw');
 
+// 7b) interactive tutorial: page renders, stage select works, highlight sets data-tut
+click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'tut'));
+ok(app.innerHTML.includes('三步看懂') && app.innerHTML.includes('在页面中高亮'), 'tutorial page renders with the stage guide');
+click([...app.querySelectorAll('[data-action="tutSelect"]')].find(b => b.dataset.stage === 'ar'));
+ok(app.innerHTML.includes('应收账款（已出货'), 'selecting AR shows the AR guide section');
+click([...app.querySelectorAll('[data-action="tutHi"]')].find(b => b.dataset.stage === 'ar'));
+ok(app.getAttribute('data-tut') === 'ar' && app.innerHTML.includes('教程 · AR'), 'AR highlight jumps to 应收账款 and flags data-tut="ar"');
+click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'dash'));
+ok(app.getAttribute('data-tut') === '', 'manual nav clears the tutorial highlight');
+
 // 8) management report shows the HD/AR/FD + Paid/AP/FP provenance under the cash lens
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'report'));
 ok(app.innerHTML.includes('数据构成') && app.innerHTML.includes('已实现（事实）') && app.innerHTML.includes('其中已订'), 'report shows HD/AR/FD cash-lens provenance table');

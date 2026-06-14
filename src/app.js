@@ -41,7 +41,8 @@
       { id: 'dash', label: '总览', sym: '◧' }, { id: 'hist', label: '历史数据', sym: '◷' },
       { id: 'fcst', label: '预测', sym: '⤴' }, { id: 'assume', label: '假设', sym: '⚙' },
       { id: 'seedpay', label: '苗/花应付款', sym: '❀' }, { id: 'logi', label: '物流成本', sym: '⇄' },
-      { id: 'ar', label: '应收账款', sym: '▤' }, { id: 'report', label: '管理层报告', sym: '⎙' }
+      { id: 'ar', label: '应收账款', sym: '▤' }, { id: 'report', label: '管理层报告', sym: '⎙' },
+      { id: 'tut', label: '教程', sym: '✎' }
     ];
     var page = S.page;
     var navItems = navDef.map(function (n) {
@@ -58,7 +59,8 @@
       seedpay: ['苗/花应付款', '按付款周登记应付苗款 / 开花株款 · 分国内 / 国外 · 含逾期与紧急度汇总'],
       logi: ['物流成本', '各批次运费 · 按付款周计入「生产物资运费」现金流'],
       ar: ['应收账款', '客户应收余额与每周预计回款'],
-      report: ['管理层报告', '一页式 · 非财务人员也能读懂']
+      report: ['管理层报告', '一页式 · 非财务人员也能读懂'],
+      tut: ['使用教程', '三步了解 HD / AR / FD 如何录入与联动']
     };
     var fy = (S.config.startISO || '').slice(2).replace(/-/g, '.') + ' → ' + (S.config.endISO || '').slice(2).replace(/-/g, '.');
 
@@ -924,12 +926,110 @@
       '</div></div>';
   }
 
-  var PAGES = { dash: renderDash, hist: renderHist, fcst: renderFcst, assume: renderAssume, seedpay: renderSeedpay, logi: renderLogi, ar: renderAr, report: renderReport };
+  // ---------- TUTORIAL (interactive HD / AR / FD walkthrough) ----------
+  // Each stage: what it is, where to key it, a field→meaning→destination table,
+  // and the page its "highlight" button jumps to (CSS in styles.css glows the
+  // matching inputs via their data attributes).
+  var TUT = {
+    hd: {
+      label: '已收 / 已付 · 事实', color: 'var(--plum)', page: 'hist',
+      title: 'HD · 历史数据（已收 / 已付）',
+      what: '已经发生、而且钱已经收到或付出的交易。这是“事实”，不会再变——就像银行流水。',
+      where: '「历史数据」标签页，先在上方选中一个已经结束的周。',
+      fields: [
+        ['销售明细 · 金额(元)', '该周每个渠道/规格实际收到的货款', '国外项 → 国外收款；其余 → 国内收款（HD）'],
+        ['销售明细 · 数量(株)', '卖出的株数（只用来算平均单价，不直接进现金）', '平均单价 = 金额 ÷ 数量（核对用）'],
+        ['现金流实际 · 收款', '该周实际到账现金（会覆盖上面的销售明细汇总）', 'HD 收款 → 现金轨迹【实线】'],
+        ['现金流实际 · 付款', '该周实际付出的各类支出', 'HD 已付 → 现金轨迹【实线】'],
+        ['进货验货', '供应商到货批次（类型 / 数量 / 金额 / IQ号）', '生成「苗/花应付款」(AP)']
+      ],
+      hooks: '汇总进现金轨迹的【实线】，以及报告里的【已实现（事实）】列。'
+    },
+    ar: {
+      label: '已出货 · 待收', color: '#3f8f6b', page: 'ar',
+      title: 'AR · 应收账款（已出货、待收款）',
+      what: '货已经发出去了，但钱还没收回来。金额是确定的（货值），你只需要预测“什么时候”能收到。',
+      where: '「应收账款」标签页（账期在「假设 · 回款节奏」里设定）。',
+      fields: [
+        ['客户 · 分类(国外/国内/省内/省外)', '决定收款走哪条线、用哪个账期', '路由 + 账期'],
+        ['出货记录 · 货值(元)', '这批已发货物的金额（应收金额）', 'AR 金额'],
+        ['出货记录 · 出货日期', '发货日期；＋账期 = 预计回款周', 'AR 时间'],
+        ['回款周覆盖（每笔）', '手动指定回款周（可选，留空＝自动）', 'AR 时间（覆盖）'],
+        ['账期 · 假设·回款节奏', '出货后约几周收到钱，按分类设定（默认 4/2/2/2）', 'AR 时间']
+      ],
+      hooks: '汇总进现金轨迹的【绿色点线“已订(AR)”】（只伸到有订单的几周），以及报告里的【应收】列；并和 FD 对比看预测准不准。'
+    },
+    fd: {
+      label: '未发货 · 预测', color: 'var(--orchid)', page: 'assume',
+      title: 'FD · 预测（还没发货、还没收款）',
+      what: '还没发生的销售。金额和时间都要预测，系统按“单价 × 销量 × 当周回款率”自动算出预计收款。',
+      where: '「假设」标签页设定驱动因子；结果在「预测」标签页查看，可逐周覆盖。',
+      fields: [
+        ['销售单价(元/株)', '每个渠道/规格每株的价格', 'FD 收入'],
+        ['销量与淘汰(株/周)', '每周各渠道卖出的株数 + 预测淘汰率', 'FD 收入'],
+        ['当周回款率', '当周销售里有多少比例当周就收到（0.7 = 70%）', 'FD 收款时间'],
+        ['种苗 / 物料 / 运营 等', '各项支出的预测（每月 / 每周）', 'FP 支出预测'],
+        ['预测页 · 逐周覆盖', '某周想手动改预测值就直接填（留空＝用假设）', 'FD 覆盖']
+      ],
+      hooks: '汇总进现金轨迹的【橙色点线“预测(FD)”】（贯穿全年），以及报告里的【预测】列。'
+    }
+  };
+
+  function renderTutorial() {
+    var order = ['hd', 'ar', 'fd'], stage = TUT[tutDoc] ? tutDoc : 'hd', t = TUT[stage];
+    var sel = order.map(function (k) {
+      var x = TUT[k], on = k === stage;
+      return '<button data-action="tutSelect" data-stage="' + k + '" style="flex:1; cursor:pointer; text-align:left; border:1px solid ' + (on ? x.color : 'var(--line)') + '; background:' + (on ? x.color : '#fff') + '; color:' + (on ? '#fff' : 'var(--ink)') + '; border-radius:12px; padding:13px 14px; box-shadow:' + (on ? '0 8px 20px -12px ' + x.color : 'none') + ';">' +
+        '<div class="num" style="font-size:16px; font-weight:700;">' + k.toUpperCase() + '</div>' +
+        '<div style="font-size:11px; opacity:.9; margin-top:2px;">' + esc(x.label) + '</div></button>';
+    }).join('');
+    var rows = t.fields.map(function (f) {
+      return '<tr><td style="padding:8px 6px; border-bottom:1px solid #f1ebdf; font-weight:600;">' + esc(f[0]) + '</td>' +
+        '<td style="padding:8px 6px; border-bottom:1px solid #f1ebdf; color:#4a4136;">' + esc(f[1]) + '</td>' +
+        '<td style="padding:8px 6px; border-bottom:1px solid #f1ebdf; color:' + t.color + '; font-weight:600;">' + esc(f[2]) + '</td></tr>';
+    }).join('');
+    return '<div>' +
+      card('<div class="serif" style="font-size:18px; font-weight:700; margin-bottom:6px;">三步看懂这套系统</div>' +
+        '<div style="font-size:13px; color:#3a342a; line-height:1.75;">每一笔生意都会经过三个阶段，像水一样从“预测”流到“收到”：<br>' +
+        '<b style="color:var(--orchid);">FD 预测</b>（还没发货）→ <b style="color:#3f8f6b;">AR 应收</b>（已发货、等收钱）→ <b style="color:var(--plum);">HD 已收</b>（钱到账，结束）。<br>' +
+        '你在不同标签页录入不同阶段的数据，系统自动把它们画到“现金轨迹”上并互相对比。点下面任意一块，看它怎么填、连到哪里。</div>', ' margin-bottom:16px;') +
+      '<div style="display:flex; gap:12px; margin-bottom:16px;">' + sel + '</div>' +
+      card('<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;"><span style="width:11px; height:11px; border-radius:50%; background:' + t.color + ';"></span><div class="serif" style="font-size:17px; font-weight:700;">' + esc(t.title) + '</div></div>' +
+        '<div style="font-size:13.5px; color:#3a342a; line-height:1.7; margin-bottom:12px;"><b>是什么：</b>' + esc(t.what) + '</div>' +
+        '<div style="font-size:13px; color:#3a342a; margin-bottom:14px;"><b>在哪里填：</b>' + esc(t.where) + '</div>' +
+        '<table style="width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:14px;"><thead><tr style="color:var(--muted); font-size:11.5px;">' +
+          '<th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">字段</th>' +
+          '<th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">填什么</th>' +
+          '<th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">连接到</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+        '<div style="font-size:12.5px; color:var(--muted); margin-bottom:16px;"><b>最终去向：</b>' + esc(t.hooks) + '</div>' +
+        '<button data-action="tutHi" data-stage="' + stage + '" data-page="' + t.page + '" style="background:' + t.color + '; color:#fff; border:none; border-radius:10px; padding:11px 18px; font-size:13.5px; font-weight:700; cursor:pointer;">在页面中高亮这些字段 →</button>') +
+    '</div>';
+  }
+
+  function renderTutBanner(stage) {
+    var t = TUT[stage];
+    var items = t.fields.map(function (f) { return '<li style="margin-bottom:2px;"><b>' + esc(f[0]) + '</b> — ' + esc(f[1]) + '</li>'; }).join('');
+    return '<div class="no-print" style="background:#fffaf0; border:1px solid ' + t.color + '; border-left:5px solid ' + t.color + '; border-radius:12px; padding:12px 16px; margin-bottom:16px;">' +
+      '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' +
+        '<span style="font-size:11px; font-weight:700; color:#fff; background:' + t.color + '; padding:2px 8px; border-radius:6px;">教程 · ' + stage.toUpperCase() + '</span>' +
+        '<span style="font-size:13px; font-weight:700;">' + esc(t.title) + '</span>' +
+        '<span style="margin-left:auto; display:flex; gap:8px;">' +
+          '<button data-action="nav" data-page="tut" style="background:#fff; border:1px solid var(--field-bd); border-radius:8px; padding:6px 11px; font-size:12px; cursor:pointer;">返回教程</button>' +
+          '<button data-action="tutExit" style="background:' + t.color + '; color:#fff; border:none; border-radius:8px; padding:6px 11px; font-size:12px; font-weight:700; cursor:pointer;">退出高亮</button>' +
+        '</span>' +
+      '</div>' +
+      '<div style="font-size:12px; color:#4a4136; margin-top:8px;">金色高亮的就是要填的字段：<ul style="margin:6px 0 0; padding-left:18px; line-height:1.6;">' + items + '</ul></div>' +
+    '</div>';
+  }
+
+  var PAGES = { dash: renderDash, hist: renderHist, fcst: renderFcst, assume: renderAssume, seedpay: renderSeedpay, logi: renderLogi, ar: renderAr, report: renderReport, tut: renderTutorial };
 
   // ===================================================================
   //  MOUNT + EVENTS
   // ===================================================================
   var store, root;
+  var tutDoc = 'hd';               // which stage's guide is shown on the 教程 page
+  var tutHi = null;                // active highlight stage on a real page ('hd'|'ar'|'fd'|null)
   var currentUser = null;          // {id,email} once authenticated, else null
   var authTab = 'login';           // 'login' | 'signup'
   var authError = '';
@@ -955,10 +1055,13 @@
     var f = captureFocus();
     var V = buildView(state);
     var pageFn = PAGES[V.page] || renderDash;
+    var hiOn = tutHi && TUT[tutHi] && V.page === TUT[tutHi].page;   // only glow on the stage's own page
+    var tutBanner = hiOn ? renderTutBanner(tutHi) : '';
     root.innerHTML = renderHeader(V) +
       '<main style="flex:1; min-width:0; display:flex; flex-direction:column;">' +
-        '<div style="padding:26px 28px 60px; flex:1;">' + pageFn(V) + '</div>' +
+        '<div style="padding:26px 28px 60px; flex:1;">' + tutBanner + pageFn(V) + '</div>' +
       '</main>';
+    root.setAttribute('data-tut', hiOn ? tutHi : '');
     restoreFocus(f);
     wireChart();
   }
@@ -1056,7 +1159,10 @@
     if (!btn) return;
     var a = btn.dataset.action;
     switch (a) {
-      case 'nav': { var dw = defaultWeekForPage(store.state, btn.dataset.page); if (dw != null) store.set({ page: btn.dataset.page, weekIdx: dw }); else store.setPage(btn.dataset.page); break; }
+      case 'nav': { tutHi = null; var dw = defaultWeekForPage(store.state, btn.dataset.page); if (dw != null) store.set({ page: btn.dataset.page, weekIdx: dw }); else store.setPage(btn.dataset.page); break; }
+      case 'tutSelect': tutDoc = btn.dataset.stage; break;
+      case 'tutHi': tutHi = btn.dataset.stage; store.setPage(btn.dataset.page); break;
+      case 'tutExit': tutHi = null; break;
       case 'toggleUnit': store.toggleUnit(); break;
       case 'selectWeek': store.selectWeek(+btn.dataset.idx); break;
       case 'pickWeek': store.editArr(btn.dataset.arr, +btn.dataset.idx, btn.dataset.key, +btn.dataset.week); break;
