@@ -77,6 +77,24 @@ summary::marker{ content:''; }
   body{ background:#fff; }
 }
 
+/* ---- mobile / responsive (phones & small tablets) ----------------------- */
+@media (max-width: 768px){
+  /* every inline multi-column grid collapses to a single column */
+  main [style*="grid-template-columns"]{ grid-template-columns:1fr !important; }
+  /* slimmer page + card chrome so content isn't squeezed */
+  main > div{ padding:14px 12px 48px !important; }
+  .card{ padding:15px !important; overflow-x:auto; }
+  /* compact headers (the nav + fiscal-year controls already wrap / scroll) */
+  header{ padding:10px 12px !important; }
+  /* wide tables scroll inside their card instead of breaking the page width */
+  main table{ min-width:0; }
+  /* keep KPI tiles 2-up — defined AFTER the grid rule so it wins the tie */
+  main .kpi-row{ grid-template-columns:1fr 1fr !important; }
+}
+@media (max-width: 440px){
+  main .kpi-row{ grid-template-columns:1fr !important; }
+}
+
 /* ---- interactive tutorial: glow the fields for the selected stage -------- */
 @keyframes tutPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(181,134,47,0); } 50%{ box-shadow:0 0 0 5px rgba(181,134,47,.30); } }
 #app[data-tut="hd"] input[data-map="sales"][data-key$="amt"],

@@ -462,7 +462,7 @@
       xt + '</svg>';
   }
 
-  function card(inner, extra) { return '<div style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);' + (extra || '') + '">' + inner + '</div>'; }
+  function card(inner, extra) { return '<div class="card" style="background:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);' + (extra || '') + '">' + inner + '</div>'; }
   // company mark — inline SVG (green check + red bud), no external asset
   function logoSVG(px) {
     return '<svg viewBox="0 0 110 110" width="' + px + '" height="' + px + '" style="display:block;" role="img" aria-label="logo">' +
