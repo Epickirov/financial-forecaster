@@ -216,8 +216,8 @@
     var c0 = E.computed(S, selIdx);
     var keep = c0._keep, collectRate = c0._collectRate;
     var gA = function (id) { return E.effAN(S, selIdx, id); };
-    function rb(qid, pid) { var qW = gA(qid) * keep / E.WPM; return { qty: Math.round(qW).toLocaleString('zh-CN'), price: gA(pid), amt: yuan0(qW * gA(pid)) }; }
-    var domGrossW = c0._domMonthly / E.WPM;
+    function rb(qid, pid) { var qW = gA(qid) * keep; return { qty: Math.round(qW).toLocaleString('zh-CN'), price: gA(pid), amt: yuan0(qW * gA(pid)) }; }
+    var domGrossW = c0._domGross;
     var revBreak = {
       defect: (gA('defectRate') * 100).toFixed(1) + '%',
       forLarge: rb('qtyForLarge', 'priceForLarge'), forSmall: rb('qtyForSmall', 'priceForSmall'),
@@ -230,8 +230,8 @@
       foreignTotal: fmt(E.fcOf(S, selIdx, 'foreign')),
       domesticTotal: fmt(E.fcOf(S, selIdx, 'domestic'))
     };
-    var revBreakForeign = [merge({ label: '国外大花' }, revBreak.forLarge), merge({ label: '国外小花' }, revBreak.forSmall)];
-    var revBreakDom = [merge({ label: '国内大花' }, revBreak.domLarge), merge({ label: '国内小花' }, revBreak.domSmall), merge({ label: '染色花' }, revBreak.dye), merge({ label: '切花' }, revBreak.cut)];
+    var revBreakForeign = [merge({ label: '国外大花 3.5/3.8寸' }, revBreak.forLarge), merge({ label: '国外小花 2.8/3.0寸' }, revBreak.forSmall)];
+    var revBreakDom = [merge({ label: '国内大花 3.5/3.8寸' }, revBreak.domLarge), merge({ label: '国内小花 2.8/3.0寸' }, revBreak.domSmall), merge({ label: '染色花' }, revBreak.dye), merge({ label: '切花' }, revBreak.cut)];
 
     // ---- shipments (进货验货) / payables (苗·花应付款) / logistics ----------
     var shipmentRows = (S.shipments || []).map(function (sh, i) {
@@ -285,9 +285,9 @@
       });
     }
     var assumeGroups = [
-      { gid: 'price', title: '销售单价', desc: '每株价格', sym: '¥', fields: [fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3寸', '元/株'), fld('priceForLarge', '国外大花', '元/株'), fld('priceForSmall', '国外小花', '元/株'), fld('priceCut', '切花', '元/株'), fld('priceDye', '染色花', '元/株')], custom: grpCustom('price') },
+      { gid: 'price', title: '销售单价', desc: '每株价格', sym: '¥', fields: [fld('priceForLarge', '国外大花 3.5/3.8寸', '元/株'), fld('priceForSmall', '国外小花 2.8/3.0寸', '元/株'), fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3.0寸', '元/株'), fld('priceDye', '染色花', '元/株'), fld('priceCut', '切花', '元/株')], custom: grpCustom('price') },
       { gid: 'collect', title: '回款节奏', desc: '当月与次月回款比例', sym: '%', fields: [fld('collectInMonth', '当月回款率', '比例', '0.7 = 70%'), fld('collectPrior', '次月回款率', '比例', '0.3 = 30%')], custom: grpCustom('collect') },
-      { gid: 'volume', title: '销量与淘汰', desc: '各渠道月销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花数量', '株/月'), fld('qtyForSmall', '国外小花数量', '株/月'), fld('qtyDomLarge', '国内大花数量', '株/月'), fld('qtyDomSmall', '国内小花数量', '株/月'), fld('qtyDye', '染色花数量', '株/月'), fld('qtyCut', '切花数量', '株/月'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
+      { gid: 'volume', title: '销量与淘汰', desc: '各渠道周销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花 3.5/3.8寸', '株/周'), fld('qtyForSmall', '国外小花 2.8/3.0寸', '株/周'), fld('qtyDomLarge', '国内大花 3.5/3.8寸', '株/周'), fld('qtyDomSmall', '国内小花 2.8/3.0寸', '株/周'), fld('qtyDye', '染色花', '株/周'), fld('qtyCut', '切花', '株/周'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
       { gid: 'seed', title: '种苗采购', desc: '每月进苗与成本', sym: '❀', fields: [fld('seedlingMonthly', '月进苗株数', '株/月'), fld('seedlingPrice', '种苗平均单价', '元/株')], custom: grpCustom('seed') },
       { gid: 'material', title: '生产物料成本', desc: '每株物料成本', sym: '▦', fields: [fld('pkgCost', '包装材料', '元/株'), fld('prodCost', '生产材料', '元/株')], custom: grpCustom('material') },
       { gid: 'opex', title: '人工 · 水电 · 运费 · 其他', desc: '每月固定运营支出', sym: '⚙', fields: [fld('payrollMonthly', '工资社保税费', '元/月'), fld('utilitiesMonthly', '水电费', '元/月'), fld('freightMonthly', '运费', '元/月'), fld('projectsMonthly', '项目及工程', '元/月'), fld('travelWeekly', '差旅招待（每周）', '元/周'), fld('loanMonthly', '房贷/借款', '元/月')], custom: grpCustom('opex') }

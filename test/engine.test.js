@@ -54,9 +54,9 @@ test('computed splits foreign/domestic from named drivers', function () {
   var s = fresh();
   var c = E.computed(s, 10);
   assert.ok(c.foreign > 0 && c.domestic > 0);
-  // foreign = (qFL*priceForLarge + qFS*priceForSmall)/WPM, with keep=0.95
+  // foreign = qFL*priceForLarge + qFS*priceForSmall (quantities are 株/周), keep=0.95
   var keep = 1 - 0.05;
-  var expF = (24000 * keep * 19 + 8000 * keep * 16) / E.WPM;
+  var expF = 24000 * keep * 19 + 8000 * keep * 16;
   approx(c.foreign, expF, 1e-3);
 });
 

@@ -229,17 +229,17 @@
     var qDL = g('qtyDomLarge') * keep, qDS = g('qtyDomSmall') * keep,
         qDye = g('qtyDye') * keep, qCut = g('qtyCut') * keep;
     var totalQ = qFL + qFS + qDL + qDS + qDye + qCut;
-    var volW = totalQ / WPM;
+    var volW = totalQ;                                      // 销量 entered as 株/周 (weekly)
 
-    // revenue by channel × size → 国外 / 国内 collection (monthly → weekly)
-    var foreignMonthly = qFL * g('priceForLarge') + qFS * g('priceForSmall');
-    var domMonthly = qDL * g('priceDomLarge') + qDS * g('priceDomSmall') +
-                     qDye * g('priceDye') + qCut * g('priceCut');
+    // revenue by channel × size → 国外 / 国内 collection (weekly)
+    var foreignWeekly = qFL * g('priceForLarge') + qFS * g('priceForSmall');
+    var domWeekly = qDL * g('priceDomLarge') + qDS * g('priceDomSmall') +
+                    qDye * g('priceDye') + qCut * g('priceCut');
     var collectRate = g('collectInMonth') + g('collectPrior');
 
     var arDue = arDueInWeek(state, wIdx);                   // 应收账款 collected this week (国外 / 国内)
-    var foreign = foreignMonthly / WPM + arDue.foreign;
-    var domSales = domMonthly / WPM * collectRate;          // collection from NEW sales
+    var foreign = foreignWeekly + arDue.foreign;
+    var domSales = domWeekly * collectRate;                 // collection from NEW sales (weekly)
     var arCollect = arDue.domestic;                         // 应收账款 → 国内收款
     var domestic = domSales + arCollect;
 
@@ -266,7 +266,7 @@
       payroll: payroll, utilrent: utilrent, projects: projects, materials: materials,
       travel: travel, loan: loan, custom: custom,
       // breakdown helpers (not part of the cash spine, used by 收款测算)
-      _domSales: domSales, _arCollect: arCollect, _arForeign: arDue.foreign, _domMonthly: domMonthly, _collectRate: collectRate, _keep: keep
+      _domSales: domSales, _arCollect: arCollect, _arForeign: arDue.foreign, _domGross: domWeekly, _collectRate: collectRate, _keep: keep
     };
   }
 
