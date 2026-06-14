@@ -39,6 +39,15 @@ const sel = () => Math.min(Math.max(S().weekIdx | 0, 0), E.weeks(S()).length - 1
 
 console.log('wiring.js — every field → its destination\n');
 
+// ---------- 0. per-tab default selected week on nav ----------
+nav('hist');
+const lastHist = (() => { let h = -1, Wk = E.weeks(S()); for (let i = 0; i < Wk.length; i++) if (E.isHist(S(), i)) h = i; return h; })();
+ok(sel() === lastHist && E.isHist(S(), sel()), '历史 nav defaults to the latest completed week (idx ' + lastHist + ')');
+nav('fcst');
+ok(sel() === E.currentWeekIdx(S()) + 1, '预测 nav defaults to current week + 1 (idx ' + sel() + ')');
+nav('assume');
+ok(sel() === E.currentWeekIdx(S()) + 1, '假设 nav defaults to current week + 1');
+
 // pick a clean FUTURE week with NO scheduled 苗 payable due (so the seedling
 // BASELINE assumption is in effect, not a payable override).
 nav('fcst');
@@ -48,6 +57,8 @@ ok(sel() === W && !E.isHist(S(), W) && E.dueInWeek(S(), W, '苗') === 0, 'select
 
 // ---------- 1. ASSUMPTIONS: every group drives its forecast field ----------
 nav('assume');
+// nav now defaults to current+1, so explicitly re-select the week-W we're testing
+click([...app.querySelectorAll('[data-action="selectWeek"]')].find(b => +b.dataset.idx === W));
 const cases = [
   ['priceForLarge', '30', s => E.computed(s, W).foreign, 'up'],
   ['defectRate', '0.5', s => E.computed(s, W).foreign, 'down'],   // more culling → less sellable

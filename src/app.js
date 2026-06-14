@@ -1036,12 +1036,27 @@
     if (el.dataset.config != null || el.dataset.map != null || el.dataset.arr != null) applyEdit(el);
   }
 
+  // Per-tab default selected week, applied when navigating into a tab:
+  //   历史 → the latest COMPLETED (elapsed) week — where finished actuals are entered.
+  //   预测 / 假设 → current week + 1 — the first week you actually plan.
+  // Other pages keep the current selection (null = leave weekIdx alone).
+  function defaultWeekForPage(state, page) {
+    var W = E.weeks(state), last = W.length - 1;
+    if (page === 'hist') {
+      var h = -1;
+      for (var i = 0; i < W.length; i++) { if (E.isHist(state, i)) h = i; }
+      return h >= 0 ? h : 0;
+    }
+    if (page === 'fcst' || page === 'assume') return Math.min(E.currentWeekIdx(state) + 1, Math.max(last, 0));
+    return null;
+  }
+
   function onClick(e) {
     var btn = e.target.closest ? e.target.closest('[data-action]') : null;
     if (!btn) return;
     var a = btn.dataset.action;
     switch (a) {
-      case 'nav': store.setPage(btn.dataset.page); break;
+      case 'nav': { var dw = defaultWeekForPage(store.state, btn.dataset.page); if (dw != null) store.set({ page: btn.dataset.page, weekIdx: dw }); else store.setPage(btn.dataset.page); break; }
       case 'toggleUnit': store.toggleUnit(); break;
       case 'selectWeek': store.selectWeek(+btn.dataset.idx); break;
       case 'pickWeek': store.editArr(btn.dataset.arr, +btn.dataset.idx, btn.dataset.key, +btn.dataset.week); break;
