@@ -82,4 +82,8 @@ ok(chipsBtns.length > 0, 'forecast week chips present');
 click(chipsBtns[chipsBtns.length - 1]);
 ok(true, 're-render after selecting a future week did not throw');
 
+// 8) management report shows the HD/AR/FD + Paid/AP/FP provenance under the cash lens
+click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'report'));
+ok(app.innerHTML.includes('数据构成') && app.innerHTML.includes('已实现（事实）') && app.innerHTML.includes('其中已订'), 'report shows HD/AR/FD cash-lens provenance table');
+
 console.log('\n' + pass + ' dom assertions passed.\n');

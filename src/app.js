@@ -318,6 +318,9 @@
     });
 
     // ---- report ----
+    var histPay = ser.reduce(function (a, s) { return s.isHist ? a + s.pays : a; }, 0);   // Paid (settled outflow)
+    var fcstPay = totalPay - histPay;                                                     // expected future outflow
+    var apOutstanding = (S.payables || []).reduce(function (a, p) { return E.payablePaid(p) ? a : a + E.payableAmt(S, p); }, 0);
     var profit = totalCin - totalPay;
     var repLines = [
       '本农历财年（' + fy + '）期初可用资金 ' + fmt(open0) + '，预计年末余额 ' + fmt(yearEnd) + '，较期初' + (yearEnd >= open0 ? '增长' : '下降') + ' ' + fmt(Math.abs(yearEnd - open0)) + '。',
@@ -363,7 +366,8 @@
       freightTotal: fmt(freightTotal), overdueWan: fmt(overdueTotal), hasOverdue: overdueTotal > 0, weeksList: weeksList, curW: curW, urgencyOptions: E.URGENCY_OPTIONS,
       upcoming: upcoming, assumeGroups: assumeGroups, rents: S.rents, fixed: S.fixed,
       custRows: custRows, arOutWan: fmt(arOut), catSummary: catSummary, catOptions: E.AR_CATS,
-      repCompany: S.config.name, repFy: fy, repKpis: repKpis, repLines: repLines
+      repCompany: S.config.name, repFy: fy, repKpis: repKpis, repLines: repLines,
+      repProv: { cinHd: fmt(histCin), cinFd: fmt(fcstCin), cinAr: fmt(arTotal), payPaid: fmt(histPay), payFp: fmt(fcstPay), payAp: fmt(apOutstanding) }
     };
   }
 
@@ -884,6 +888,25 @@
   // ---------- REPORT ----------
   function renderReport(V) {
     var kpis = V.repKpis.map(function (k) { return '<div style="background:var(--lilac); border-radius:12px; padding:15px 16px;"><div style="font-size:12px; color:var(--muted); margin-bottom:8px;">' + esc(k.label) + '</div><div class="num" style="font-size:17px; font-weight:700; color:' + k.color + '; white-space:nowrap;">' + esc(k.val) + '</div></div>'; }).join('');
+    var P = V.repProv;
+    function provRow(label, hd, hdLbl, fc, apLbl, ap) {
+      return '<tr><td style="padding:8px 6px; border-bottom:1px solid #f1ebdf; font-weight:700;">' + label + '</td>' +
+        '<td class="num" style="text-align:right; padding:8px 6px; border-bottom:1px solid #f1ebdf; color:var(--plum);">' + hdLbl + ' ' + esc(hd) + '</td>' +
+        '<td class="num" style="text-align:right; padding:8px 6px; border-bottom:1px solid #f1ebdf; color:var(--orchid);">' + esc(fc) + '</td>' +
+        '<td class="num" style="text-align:right; padding:8px 6px; border-bottom:1px solid #f1ebdf; color:#3f8f6b;">' + apLbl + ' ' + esc(ap) + '</td></tr>';
+    }
+    var provTable =
+      '<table style="width:100%; border-collapse:collapse; font-size:13px;">' +
+        '<thead><tr style="color:var(--muted); font-size:11.5px;">' +
+          '<th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">现金口径</th>' +
+          '<th style="text-align:right; font-weight:600; padding:7px 6px; border-bottom:1px solid var(--line); color:var(--plum);">已实现（事实）</th>' +
+          '<th style="text-align:right; font-weight:600; padding:7px 6px; border-bottom:1px solid var(--line); color:var(--orchid);">预测</th>' +
+          '<th style="text-align:right; font-weight:600; padding:7px 6px; border-bottom:1px solid var(--line); color:#3f8f6b;">其中已订</th></tr></thead>' +
+        '<tbody>' +
+          provRow('收款', P.cinHd, '已收', P.cinFd, '应收', P.cinAr) +
+          provRow('支出', P.payPaid, '已付', P.payFp, '应付', P.payAp) +
+        '</tbody></table>' +
+      '<div style="font-size:11px; color:var(--muted); margin:8px 0 24px;">现金口径：仅「已实现」为事实（已收 / 已付现金）；「预测」为模型预估；「已订」为已出货应收(AR) / 已登记应付(AP)，用于校验预测、不与预测相加。</div>';
     var lines = V.repLines.map(function (l) { return '<div style="display:flex; gap:10px; margin-bottom:11px; font-size:14px; line-height:1.6;"><span style="width:7px; height:7px; border-radius:50%; background:var(--orchid); margin-top:8px; flex:none;"></span><span style="color:#3a342a;">' + esc(l) + '</span></div>'; }).join('');
     return '<div>' +
       '<div class="no-print" style="display:flex; justify-content:flex-end; margin-bottom:14px;"><button data-action="print" style="background:var(--plum); color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer;">打印 / 导出 PDF</button></div>' +
@@ -893,6 +916,8 @@
         '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px;">' + kpis + '</div>' +
         '<div class="serif" style="font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">情况说明</div>' +
         '<div style="margin-bottom:28px;">' + lines + '</div>' +
+        '<div class="serif" style="font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">数据构成（HD / AR / FD · 现金口径）</div>' +
+        provTable +
         '<div class="serif" style="font-size:16px; font-weight:700; margin-bottom:12px; color:var(--plum2);">全年现金轨迹</div>' +
         cashChart(V, 'rep', true) +
         '<div style="font-size:11px; color:var(--muted); border-top:1px solid var(--line); padding-top:14px; margin-top:20px;">本报告由昆明统一生物科技有限公司财务预测系统自动生成 · 实线为实际、虚线为预测 · ' + esc(V.unitLabel) + '</div>' +
