@@ -76,6 +76,8 @@ cases.forEach(function (c) {
 });
 // note: the key is week-scoped, so it only affects week W onward (carry-forward)
 ok(S().assumeWeek[W + ':priceForLarge'] === '30', 'assumption override stored under week-scoped key');
+// custom-item button is gated to EXPENSE groups (price/collect/volume rows would be orphaned)
+ok([...app.querySelectorAll('[data-action="addAssume"]')].map(b => b.dataset.group).sort().join(',') === 'material,opex,seed', '+新增项目 present only on expense groups (removed from price/collect/volume)');
 
 // ---------- 2. custom expense item → 其他自定义 (custom) ----------
 const before其他 = E.computed(S(), W).custom;

@@ -691,7 +691,7 @@
       return card('<div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">' +
         '<span style="width:30px; height:30px; border-radius:9px; background:var(--lilac); color:var(--plum); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;">' + esc(g.sym) + '</span>' +
         '<div class="serif" style="font-size:16px; font-weight:700; flex:1;">' + esc(g.title) + '</div>' +
-        '<button data-action="addAssume" data-group="' + g.gid + '" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer;">+ 新增项目</button></div>' +
+        (['seed', 'material', 'opex'].indexOf(g.gid) >= 0 ? '<button data-action="addAssume" data-group="' + g.gid + '" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer;">+ 新增项目</button>' : '') + '</div>' +
         '<div style="font-size:12px; color:var(--muted); margin:0 0 14px 40px;">' + esc(g.desc) + '</div>' + fields + customs);
     }).join('');
 

@@ -26,6 +26,8 @@
     { id: 'mp',   name: '苗',                grp: '苗' },
     { id: 'fx28', name: '国外 2.8/3寸',      grp: '国外' },
     { id: 'fx35', name: '国外 3.5寸',        grp: '国外' },
+    { id: 'fxdye', name: '国外染色花',       grp: '国外' },
+    { id: 'fxcut', name: '国外切花',         grp: '国外' },
     { id: 'xj28', name: '小街 2.8/3寸',      grp: '国内' },
     { id: 'xj35', name: '小街 3.5寸',        grp: '国内' },
     { id: 'dn28', name: '斗南 2.8/3寸',      grp: '国内' },

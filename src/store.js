@@ -194,11 +194,13 @@
   };
 
   Store.prototype.addAssumeItem = function (group) {
-    var expense = ['seed', 'material', 'opex'].indexOf(group) >= 0;
+    // Custom items are only meaningful in EXPENSE groups (they feed 其他自定义 cash).
+    // 销售单价/回款节奏/销量 build revenue from a fixed product recipe with no slot for
+    // a freeform row, so a custom item there would be orphaned — refuse it.
+    if (['seed', 'material', 'opex'].indexOf(group) < 0) return;
     var id = 'c_' + Math.random().toString(36).slice(2, 8);
-    var unit = group === 'price' ? '元/株' : group === 'collect' ? '比例' : group === 'volume' ? '株/月' : expense ? '元/月' : '';
     this.state.customItems = this.state.customItems.concat([
-      { id: id, group: group, name: '新项目', unit: unit, kind: expense ? 'monthlyExpense' : 'reference' }
+      { id: id, group: group, name: '新项目', unit: '元/月', kind: 'monthlyExpense' }
     ]);
     this._notify();
   };

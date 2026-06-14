@@ -159,6 +159,16 @@ test('payableBuckets groups by 渠道 × time-bucket × 紧急度 and respects s
   approx(E.payableBuckets(s, '苗')['国内'].total['三级'], 100000);
 });
 
+test('销售明细: 国外染色花/国外切花 route to 国外收款 (matches the forecast channel)', function () {
+  var s = fresh();
+  var wT = E.weeks(s).findIndex(function (w) { return '2026-05-26' >= w.startISO && '2026-05-26' <= w.endISO; });
+  var beforeF = E.salesReceipts(s, wT).foreign, beforeD = E.salesReceipts(s, wT).domestic;
+  s.sales[wT + ':fxdye:amt'] = '12345';   // 国外染色花
+  s.sales[wT + ':fxcut:amt'] = '6789';    // 国外切花
+  approx(E.salesReceipts(s, wT).foreign, beforeF + 12345 + 6789);   // → 国外 HD
+  approx(E.salesReceipts(s, wT).domestic, beforeD);                 // domestic untouched
+});
+
 test('销售明细 auto-fills 收款 (国外/国内) when no manual actual is keyed', function () {
   var s = fresh();
   var wT = E.weeks(s).findIndex(function (w) { return '2026-05-26' >= w.startISO && '2026-05-26' <= w.endISO; });
