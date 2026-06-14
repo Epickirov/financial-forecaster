@@ -61,23 +61,44 @@ test('computed splits foreign/domestic from named drivers', function () {
   approx(c.foreign, expF, 1e-3);
 });
 
-// ---- 应收账款: shipments → outstanding, collected in a per-customer week ---
-test('应收账款 collection feeds computed by channel (国外→foreign, 其余→domestic)', function () {
+// ---- 应收账款: per-shipment collection = 出货周 + 分类账期 ------------------
+test('应收账款: per-shipment collection week = 出货周 + 分类账期 (国外→foreign, 其余→domestic)', function () {
   var s = fresh();
-  var wT = E.weeks(s).findIndex(function (w) { return '2026-05-26' >= w.startISO && '2026-05-26' <= w.endISO; });
-  var cw = wT + 2;                          // demo: c1(省内 186000) + c3(国外 515000) collect here
+  // demo: ar1 c1省内 186000 @2026-05-20 (wk13), ar2 c3国外 515000 @2026-05-18 (wk12),
+  //       ar3 c2省内 240000 @2026-05-25 (wk13). default 账期: 省内=2, 国外=4.
+  assert.strictEqual(E.arCollectWeek(s, s.arShipments[0]), 15); // ar1: 13 + 2
+  assert.strictEqual(E.arCollectWeek(s, s.arShipments[1]), 16); // ar2: 12 + 4
+  assert.strictEqual(E.arCollectWeek(s, s.arShipments[2]), 15); // ar3: 13 + 2
   approx(E.customerOutstanding(s, 'c1'), 186000);   // outstanding = sum of that customer's AR shipments
-  var due = E.arDueInWeek(s, cw);
-  approx(due.domestic, 186000);
-  approx(due.foreign, 515000);
-  var c = E.computed(s, cw);
-  approx(c._arCollect, 186000);             // 省内/国内 AR → 国内收款
-  approx(c._arForeign, 515000);             // 国外 AR → 国外收款
-  approx(c.domestic, c._domSales + c._arCollect);
-  // moving a customer's collection week shifts the collection
-  s.customers[0].collectWeek = '' + (cw + 1);
-  approx(E.arDueInWeek(s, cw).domestic, 0);
-  approx(E.arDueInWeek(s, cw + 1).domestic, 186000);
+  var d15 = E.arDueInWeek(s, 15), d16 = E.arDueInWeek(s, 16);
+  approx(d15.domestic, 186000 + 240000);    // ar1 + ar3 (省内 → 国内收款)
+  approx(d15.foreign, 0);
+  approx(d16.foreign, 515000);              // ar2 (国外 → 国外收款)
+  approx(d16.domestic, 0);
+  // these still feed computed's per-channel breakdown helpers
+  var c = E.computed(s, 16);
+  approx(c._arForeign, 515000);
+});
+
+test('应收账款: per-shipment override beats date+lag; editable 账期 shifts timing', function () {
+  var s = fresh();
+  s.arShipments[0].collectWeek = '20';                          // explicit override
+  assert.strictEqual(E.arCollectWeek(s, s.arShipments[0]), 20);
+  approx(E.arDueInWeek(s, 20).domestic, 186000);
+  approx(E.arDueInWeek(s, 15).domestic, 240000);                // only ar3 remains in wk15
+  var s2 = fresh();
+  s2.assume.lagProvIn = '5';                                    // 省内 账期 2 → 5 weeks
+  assert.strictEqual(E.arCollectWeek(s2, s2.arShipments[2]), 18); // ar3: 13 + 5
+  approx(E.arDueInWeek(s2, 18).domestic, 186000 + 240000);
+  approx(E.arDueInWeek(s2, 15).domestic, 0);
+});
+
+test('应收账款: falls back to per-customer 回款周 when shipment has no date/override', function () {
+  var s = fresh();
+  s.arShipments[0].date = ''; s.arShipments[0].collectWeek = '';  // neither date nor override
+  var cw = parseInt(s.customers[0].collectWeek, 10);              // c1.collectWeek = wTarget+2 = 16
+  assert.strictEqual(E.arCollectWeek(s, s.arShipments[0]), cw);
+  approx(E.arDueInWeek(s, cw).domestic, 186000);
 });
 
 // ---- 苗/花应付款 register drives 苗款/开花株款 timing; freight → materials --

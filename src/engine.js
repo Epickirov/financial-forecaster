@@ -201,19 +201,56 @@
     return { foreign: foreign, domestic: domestic };
   }
 
-  // 应收账款: each customer's receivable shipments sum to their outstanding,
-  // collected in the customer's chosen collection week. 国外 customers feed
-  // 国外收款; everyone else feeds 国内收款.
+  // 应收账款: each AR shipment (已出货货值) collects on its OWN timeline.
+  // Collection week resolves, in order:
+  //   (1) explicit per-shipment override (collectWeek), else
+  //   (2) 出货周 + the customer-category 账期 (editable in 假设·回款节奏; else a
+  //       sensible default), else
+  //   (3) the per-customer 回款周 as a fallback (date-less legacy rows).
+  // 国外 customers feed 国外收款; everyone else feeds 国内收款.
+  var AR_LAG_KEY = { '国外': 'lagForeign', '国内': 'lagDomestic', '省内': 'lagProvIn', '省外': 'lagProvOut' };
+  var AR_LAG_DEFAULT = { '国外': 4, '国内': 2, '省内': 2, '省外': 2 };
+
+  function customerById(state, id) {
+    var L = state.customers || [];
+    for (var i = 0; i < L.length; i++) if (L[i].id === id) return L[i];
+    return null;
+  }
   function customerOutstanding(state, custId) {
     return (state.arShipments || []).reduce(function (s, sh) { return sh.custId === custId ? s + num(sh.value) : s; }, 0);
   }
+  // index of the week containing an ISO date (week 0 if earlier; null if past the horizon)
+  function weekIdxOf(state, iso) {
+    if (!iso) return null;
+    var W = weeks(state);
+    for (var i = 0; i < W.length; i++) { if (iso >= W[i].startISO && iso <= W[i].endISO) return i; }
+    return (W.length && iso < W[0].startISO) ? 0 : null;
+  }
+  // collection 账期 (weeks) for a category, effective at week `atWeek`
+  function arLag(state, cat, atWeek) {
+    var v = effA(state, atWeek == null ? 0 : atWeek, AR_LAG_KEY[cat] || 'lagDomestic');
+    if (v !== undefined && v !== '' && !isNaN(parseFloat(v))) return parseInt(v, 10);
+    return AR_LAG_DEFAULT[cat] != null ? AR_LAG_DEFAULT[cat] : 2;
+  }
+  // resolved collection week for ONE AR shipment (null = unscheduled)
+  function arCollectWeek(state, sh) {
+    if (sh.collectWeek !== undefined && sh.collectWeek !== '' && sh.collectWeek !== null) {
+      var ov = parseInt(sh.collectWeek, 10); if (!isNaN(ov)) return ov;
+    }
+    var cust = customerById(state, sh.custId), cat = (cust && cust.cat) || '国内';
+    var sw = weekIdxOf(state, sh.date);
+    if (sw != null) return sw + arLag(state, cat, sw);
+    if (cust && cust.collectWeek !== '' && cust.collectWeek != null) {
+      var cw = parseInt(cust.collectWeek, 10); if (!isNaN(cw)) return cw;
+    }
+    return null;
+  }
   function arDueInWeek(state, wIdx) {
     var foreign = 0, domestic = 0;
-    (state.customers || []).forEach(function (c) {
-      var w = parseInt(c.collectWeek, 10);
-      if (isNaN(w) || w !== wIdx) return;
-      var amt = customerOutstanding(state, c.id);
-      if (c.cat === '国外') foreign += amt; else domestic += amt;
+    (state.arShipments || []).forEach(function (sh) {
+      if (arCollectWeek(state, sh) !== wIdx) return;
+      var cust = customerById(state, sh.custId), cat = (cust && cust.cat) || '国内';
+      if (cat === '国外') foreign += num(sh.value); else domestic += num(sh.value);
     });
     return { foreign: foreign, domestic: domestic };
   }
@@ -373,6 +410,7 @@
     payWeekOf: payWeekOf, dueInWeek: dueInWeek, freightDueInWeek: freightDueInWeek,
     lastWeekOfMonth: lastWeekOfMonth, payableBuckets: payableBuckets, salesReceipts: salesReceipts,
     customerOutstanding: customerOutstanding, arDueInWeek: arDueInWeek,
+    customerById: customerById, weekIdxOf: weekIdxOf, arLag: arLag, arCollectWeek: arCollectWeek, AR_LAG_KEY: AR_LAG_KEY, AR_LAG_DEFAULT: AR_LAG_DEFAULT,
     computed: computed, isHist: isHist, fcOf: fcOf, acOf: acOf, eff: eff, payOf: payOf, fcPayOf: fcPayOf,
     series: series, forecastCloses: forecastCloses,
     fmt: fmt, wan: wan, yuan0: yuan0, donut: donut

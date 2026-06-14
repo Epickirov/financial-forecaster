@@ -46,6 +46,7 @@
         priceForLarge: '', priceForSmall: '', priceForDye: '', priceForCut: '',
         priceDomLarge: '', priceDomSmall: '', priceDomDye: '', priceDomCut: '',
         collectInWeek: '',
+        lagForeign: '', lagDomestic: '', lagProvIn: '', lagProvOut: '',
         qtyForLarge: '', qtyForSmall: '', qtyForDye: '', qtyForCut: '',
         qtyDomLarge: '', qtyDomSmall: '', qtyDomDye: '', qtyDomCut: '',
         defectRate: '',
@@ -183,7 +184,7 @@
     else if (arr === 'suppliers') tmpl = { id: 'sup_' + Math.random().toString(36).slice(2, 8), name: '新供应商' };
     else if (arr === 'shipments') tmpl = { id: 'sh_' + Math.random().toString(36).slice(2, 8), type: '苗', channel: '国内', supplier: '', spec: '', qty: '', amount: '', iq: '', freight: '', freightWeek: '' };
     else if (arr === 'payables') tmpl = { id: 'p_' + Math.random().toString(36).slice(2, 8), shipmentId: '', payWeek: '', amount: '', urgency: '三级' };
-    else if (arr === 'arShipments') tmpl = { id: 'as_' + Math.random().toString(36).slice(2, 8), custId: '', value: '', date: '' };
+    else if (arr === 'arShipments') tmpl = { id: 'as_' + Math.random().toString(36).slice(2, 8), custId: '', value: '', date: '', collectWeek: '' };
     else tmpl = { name: '新条目', amount: '', months: '' };
     if (seed) { for (var k in seed) tmpl[k] = seed[k]; }
     this.state[arr] = (this.state[arr] || []).concat([tmpl]); this._notify();
