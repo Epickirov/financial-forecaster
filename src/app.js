@@ -293,7 +293,7 @@
     }
     var assumeGroups = [
       { gid: 'price', title: '销售单价', desc: '每株价格', sym: '¥', fields: [fld('priceForLarge', '国外大花 3.5/3.8寸', '元/株'), fld('priceForSmall', '国外小花 2.8/3.0寸', '元/株'), fld('priceForDye', '国外染色花', '元/株'), fld('priceForCut', '国外切花', '元/株'), fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3.0寸', '元/株'), fld('priceDomDye', '国内染色花', '元/株'), fld('priceDomCut', '国内切花', '元/株')], custom: grpCustom('price') },
-      { gid: 'collect', title: '回款节奏', desc: '当周销售收款比例', sym: '%', fields: [fld('collectInWeek', '当周回款率', '比例', '0.7 = 当周收回 70%')], custom: grpCustom('collect') },
+      { gid: 'collect', title: '回款节奏', desc: '当周销售收款比例 · 应收账款分类账期（周）', sym: '%', fields: [fld('collectInWeek', '当周回款率', '比例', '0.7 = 当周收回 70%'), fld('lagForeign', '国外应收账期', '周', '出货后约几周回款 · 默认 4'), fld('lagDomestic', '国内应收账期', '周', '默认 2'), fld('lagProvIn', '省内应收账期', '周', '默认 2'), fld('lagProvOut', '省外应收账期', '周', '默认 2')], custom: grpCustom('collect') },
       { gid: 'volume', title: '销量与淘汰', desc: '各渠道周销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花 3.5/3.8寸', '株/周'), fld('qtyForSmall', '国外小花 2.8/3.0寸', '株/周'), fld('qtyForDye', '国外染色花', '株/周'), fld('qtyForCut', '国外切花', '株/周'), fld('qtyDomLarge', '国内大花 3.5/3.8寸', '株/周'), fld('qtyDomSmall', '国内小花 2.8/3.0寸', '株/周'), fld('qtyDomDye', '国内染色花', '株/周'), fld('qtyDomCut', '国内切花', '株/周'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
       { gid: 'seed', title: '种苗采购', desc: '每月进苗与成本', sym: '❀', fields: [fld('seedlingMonthly', '月进苗株数', '株/月'), fld('seedlingPrice', '种苗平均单价', '元/株')], custom: grpCustom('seed') },
       { gid: 'material', title: '生产物料成本', desc: '每株物料成本', sym: '▦', fields: [fld('pkgCost', '包装材料', '元/株'), fld('prodCost', '生产材料', '元/株')], custom: grpCustom('material') },
@@ -304,7 +304,7 @@
     var allArShip = S.arShipments || [];
     var custRows = S.customers.map(function (c, i) {
       var ships = [];
-      allArShip.forEach(function (sh, si) { if (sh.custId === c.id) ships.push({ si: si, value: sh.value != null ? sh.value : '', date: sh.date != null ? sh.date : '' }); });
+      allArShip.forEach(function (sh, si) { if (sh.custId === c.id) ships.push({ si: si, value: sh.value != null ? sh.value : '', date: sh.date != null ? sh.date : '', collectWeek: (sh.collectWeek === '' || sh.collectWeek == null) ? '' : parseInt(sh.collectWeek, 10), computedWeek: E.arCollectWeek(S, sh) }); });
       var out = E.customerOutstanding(S, c.id);
       return { idx: i, id: c.id, name: c.name, note: c.note, cat: c.cat || '国内', catColor: E.AR_CAT_COLORS[c.cat] || '#c96442',
         collectWeek: (c.collectWeek === '' || c.collectWeek == null) ? '' : parseInt(c.collectWeek, 10),
@@ -833,12 +833,23 @@
     }).join('');
     var customers = V.custRows.map(function (c) {
       var ships = c.ships.map(function (sh) {
-        return '<div style="display:flex; gap:8px; align-items:center; margin-bottom:5px;">' +
-          '<span style="font-size:10.5px; color:var(--muted);">货值</span>' +
-          '<input class="fld" inputmode="numeric" ' + bArr('arShipments', sh.si, 'value') + ' value="' + escA(sh.value) + '" placeholder="0" style="width:118px; text-align:right; ' + FLD + '">' +
-          '<span style="font-size:10.5px; color:var(--muted);">出货日期</span>' +
-          '<input class="fld" type="date" ' + bArr('arShipments', sh.si, 'date') + ' value="' + escA(sh.date) + '" style="width:148px; ' + FLD + '">' +
-          '<button data-action="delRow" data-arr="arShipments" data-idx="' + sh.si + '" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:14px; opacity:.6;">×</button>' +
+        var cwLbl = sh.computedWeek != null ? '第' + (sh.computedWeek + 1) + '周' : '未定';
+        var overridden = sh.collectWeek !== '';
+        return '<div style="border:1px solid #f1ebdf; border-radius:8px; padding:8px 10px; margin-bottom:6px;">' +
+          '<div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap;">' +
+            '<span style="font-size:10.5px; color:var(--muted);">货值</span>' +
+            '<input class="fld" inputmode="numeric" ' + bArr('arShipments', sh.si, 'value') + ' value="' + escA(sh.value) + '" placeholder="0" style="width:104px; text-align:right; ' + FLD + '">' +
+            '<span style="font-size:10.5px; color:var(--muted);">出货日期</span>' +
+            '<input class="fld" type="date" ' + bArr('arShipments', sh.si, 'date') + ' value="' + escA(sh.date) + '" style="width:140px; ' + FLD + '">' +
+            '<span style="font-size:10.5px; color:var(--muted);">预计回款</span>' +
+            '<span style="font-size:11.5px; font-weight:700; color:var(--leaf);">' + cwLbl + '</span>' +
+            '<span style="font-size:9.5px; color:' + (overridden ? 'var(--orchid)' : 'var(--muted)') + ';">' + (overridden ? '覆盖' : '自动(出货日+账期)') + '</span>' +
+            '<button data-action="delRow" data-arr="arShipments" data-idx="' + sh.si + '" style="margin-left:auto; background:none; border:none; color:var(--rose); cursor:pointer; font-size:14px; opacity:.6;">×</button>' +
+          '</div>' +
+          '<div style="margin-top:6px; display:flex; align-items:center; gap:8px;">' +
+            '<span style="font-size:10.5px; color:var(--muted); flex:none;">回款周覆盖</span><div style="flex:1; min-width:0;">' + weekPicker('arShipments', sh.si, 'collectWeek', sh.collectWeek, V) + '</div>' +
+            (overridden ? '<button data-action="clearArWeek" data-idx="' + sh.si + '" style="flex:none; background:none; border:1px solid var(--field-bd); border-radius:6px; padding:5px 9px; font-size:10.5px; color:var(--rose); cursor:pointer;">清除</button>' : '') +
+          '</div>' +
         '</div>';
       }).join('');
       return '<div style="border:1px solid var(--line); border-radius:12px; padding:13px 15px; margin-bottom:12px; background:#fff;">' +
@@ -852,7 +863,7 @@
         '<div style="display:grid; grid-template-columns:1.15fr 1fr; gap:14px; align-items:start;">' +
           '<div><div style="font-size:11px; color:var(--muted); margin-bottom:5px;">出货记录（货值 + 出货日期，汇总为应收余额）</div>' + ships +
             '<button data-action="addArShip" data-cust="' + escA(c.id) + '" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:7px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer;">+ 添加出货</button></div>' +
-          '<div><div style="font-size:11px; color:var(--muted); margin-bottom:3px;">回款周（此客户全部应收在该周回款 · 金色＝本周 · 悬停看 +x周）</div>' + weekPicker('customers', c.idx, 'collectWeek', c.collectWeek, V) + '</div>' +
+          '<div><div style="font-size:11px; color:var(--muted); margin-bottom:3px;">默认回款周（兜底：仅用于没有出货日期的出货 · 每笔出货优先用上方「预计回款」）</div>' + weekPicker('customers', c.idx, 'collectWeek', c.collectWeek, V) + '</div>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -1016,6 +1027,7 @@
       case 'addAssume': store.addAssumeItem(btn.dataset.group); break;
       case 'delCustom': store.delCustom(btn.dataset.id); break;
       case 'togglePaid': { var pp = store.state.payables[+btn.dataset.idx]; if (pp) store.editArr('payables', +btn.dataset.idx, 'paid', !pp.paid); break; }
+      case 'clearArWeek': store.editArr('arShipments', +btn.dataset.idx, 'collectWeek', ''); break;
       case 'print': window.print(); break;
       case 'logout': doLogout(); break;
       case 'authToggle': e.preventDefault(); authTab = (authTab === 'signup' ? 'login' : 'signup'); authError = ''; renderAuth(); break;

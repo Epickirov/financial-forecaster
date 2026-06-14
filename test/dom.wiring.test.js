@@ -175,6 +175,19 @@ const domBeforeCat = E.arDueInWeek(S(), W).domestic;
 setV(byArr('customers', cIdx, 'cat'), '国外', 'change');
 ok(approx(domBeforeCat - E.arDueInWeek(S(), W).domestic, 500000, 1), '客户分类→国外 时应收从 国内 转入 国外收款');
 
+// ---------- 7b. 假设 账期 field + per-shipment 回款周 override ----------
+nav('assume');
+const lagEl = [...app.querySelectorAll('input[data-map="assumeWeek"]')].find(i => /:lagForeign$/.test(i.dataset.key));
+ok(lagEl, '假设·回款节奏 exposes 国外应收账期 (lagForeign) field');
+setV(lagEl, '6');
+ok(S().assumeWeek[sel() + ':lagForeign'] === '6', '账期 edit persists to assumeWeek (week-scoped, carry-forward)');
+nav('ar');
+const ovIdx = S().arShipments.length - 1;             // the c6 shipment added in section 7 (no 出货日期)
+const ovWeek = E.currentWeekIdx(S()) + 1;
+click(app.querySelector('[data-action="pickWeek"][data-arr="arShipments"][data-idx="' + ovIdx + '"][data-week="' + ovWeek + '"]'));
+ok(S().arShipments[ovIdx].collectWeek === ovWeek, 'per-shipment 回款周 override sets arShipments.collectWeek = ' + ovWeek);
+ok(E.arCollectWeek(S(), S().arShipments[ovIdx]) === ovWeek, 'arCollectWeek honors the per-shipment override over the customer fallback');
+
 // ---------- 8. CONFIG: dates regenerate weeks; as-of splits; unit toggles ----------
 const obal = window.document.getElementById('c|openingBalance');
 setV(obal, '1234567');
