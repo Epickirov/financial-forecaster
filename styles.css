@@ -86,7 +86,11 @@ summary::marker{ content:''; }
 #app[data-tut="ar"] select[data-arr="customers"][data-key="cat"],
 #app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="price"],
 #app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="qty"],
-#app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="collectInWeek"]{
+#app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="collectInWeek"],
+#app[data-tut="fcst"] input[data-map="fcst"],
+#app[data-tut="ap"] select[data-arr="payables"][data-key="shipmentId"],
+#app[data-tut="ap"] input[data-arr="payables"][data-key="amount"],
+#app[data-tut="freight"] input[data-arr="shipments"][data-key="freight"]{
   outline:2px solid var(--gold); outline-offset:1px; border-radius:7px;
   background:#fffaf0!important; animation:tutPulse 1.8s ease-in-out infinite;
 }

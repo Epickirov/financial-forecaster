@@ -927,53 +927,83 @@
   }
 
   // ---------- TUTORIAL (interactive HD / AR / FD walkthrough) ----------
-  // Each stage: what it is, where to key it, a field→meaning→destination table,
-  // and the page its "highlight" button jumps to (CSS in styles.css glows the
-  // matching inputs via their data attributes).
+  // Lifecycle FD 预测 → AR 已订 → HD 已结算, on BOTH the money-in and money-out
+  // sides. Each stage has one or more page "steps"; a step's 高亮 button jumps to
+  // that page and glows the matching inputs (CSS in styles.css, keyed on data-tut).
   var TUT = {
     hd: {
-      label: '已收 / 已付 · 事实', color: 'var(--plum)', page: 'hist',
-      title: 'HD · 历史数据（已收 / 已付）',
-      what: '已经发生、而且钱已经收到或付出的交易。这是“事实”，不会再变——就像银行流水。',
-      where: '「历史数据」标签页，先在上方选中一个已经结束的周。',
-      fields: [
-        ['销售明细 · 金额(元)', '该周每个渠道/规格实际收到的货款', '国外项 → 国外收款；其余 → 国内收款（HD）'],
-        ['销售明细 · 数量(株)', '卖出的株数（只用来算平均单价，不直接进现金）', '平均单价 = 金额 ÷ 数量（核对用）'],
-        ['现金流实际 · 收款', '该周实际到账现金（会覆盖上面的销售明细汇总）', 'HD 收款 → 现金轨迹【实线】'],
-        ['现金流实际 · 付款', '该周实际付出的各类支出', 'HD 已付 → 现金轨迹【实线】'],
-        ['进货验货', '供应商到货批次（类型 / 数量 / 金额 / IQ号）', '生成「苗/花应付款」(AP)']
-      ],
-      hooks: '汇总进现金轨迹的【实线】，以及报告里的【已实现（事实）】列。'
+      label: '已结算 · 事实', color: 'var(--plum)',
+      what: '已经发生、而且钱已经收到或付出的交易——事实，不会再变，就像银行流水。',
+      lifecycle: '收钱和付钱都在「历史数据」以“实际”录入。',
+      hooks: '现金轨迹【实线】，以及报告里的【已实现（事实）】列。',
+      steps: [
+        { hi: 'hd', page: 'hist', where: '历史数据页（先选一个已结束的周）', btn: '高亮 历史数据 字段', fields: [
+          ['销售明细 · 金额(元)', '该周实际收到的货款', '国外项→国外收款，其余→国内收款（HD）'],
+          ['销售明细 · 数量(株)', '卖出株数（只算平均单价，不进现金）', '平均单价核对'],
+          ['现金流实际 · 收款', '实际到账现金（覆盖销售明细汇总）', 'HD 收款 → 实线'],
+          ['现金流实际 · 付款', '实际付出的各类支出', 'HD 已付 → 实线'],
+          ['进货验货', '供应商到货批次（类型/数量/金额/IQ号）', '生成「苗/花应付款」(AP)']
+        ] }
+      ]
     },
     ar: {
-      label: '已出货 · 待收', color: '#3f8f6b', page: 'ar',
-      title: 'AR · 应收账款（已出货、待收款）',
-      what: '货已经发出去了，但钱还没收回来。金额是确定的（货值），你只需要预测“什么时候”能收到。',
-      where: '「应收账款」标签页（账期在「假设 · 回款节奏」里设定）。',
-      fields: [
-        ['客户 · 分类(国外/国内/省内/省外)', '决定收款走哪条线、用哪个账期', '路由 + 账期'],
-        ['出货记录 · 货值(元)', '这批已发货物的金额（应收金额）', 'AR 金额'],
-        ['出货记录 · 出货日期', '发货日期；＋账期 = 预计回款周', 'AR 时间'],
-        ['回款周覆盖（每笔）', '手动指定回款周（可选，留空＝自动）', 'AR 时间（覆盖）'],
-        ['账期 · 假设·回款节奏', '出货后约几周收到钱，按分类设定（默认 4/2/2/2）', 'AR 时间']
-      ],
-      hooks: '汇总进现金轨迹的【绿色点线“已订(AR)”】（只伸到有订单的几周），以及报告里的【应收】列；并和 FD 对比看预测准不准。'
+      label: '已订 · 待结算', color: '#3f8f6b',
+      what: '已经定下来、但还没结算的钱：货已发出待收款（应收），或货已订/已到待付款（应付）。金额已知，只差“何时”结算。',
+      lifecycle: '应收（要收的钱）和应付（要付的货款、运费）都在这一阶段登记。',
+      hooks: '应收→绿色点线“已订(AR)”+报告【应收】列；应付/运费→现金轨迹支出（逾期未付会滚入本周）。',
+      steps: [
+        { hi: 'ar', page: 'ar', where: '应收账款页（要收的钱）', btn: '高亮 应收账款 字段', fields: [
+          ['客户 · 分类', '决定收款走哪条线、用哪个账期', '路由 + 账期'],
+          ['出货记录 · 货值(元)', '已发货物的金额', 'AR 金额'],
+          ['出货记录 · 出货日期', '发货日；＋账期＝预计回款周', 'AR 时间'],
+          ['回款周覆盖（每笔）', '手动指定回款周（留空＝自动）', 'AR 时间（覆盖）']
+        ] },
+        { hi: 'ap', page: 'seedpay', where: '苗/花应付款页（要付的货款）', btn: '高亮 苗/花应付款 字段', fields: [
+          ['选择批次', '把「进货验货」批次连成一笔应付款', 'AP 来源'],
+          ['应付金额(元)', '要付的货款（默认全额，可拆分/部分付）', 'AP 金额'],
+          ['付款周', '这笔货款哪一周付', 'AP 时间'],
+          ['已付 / 未付', '付了就点“已付”，移出汇总、不再逾期滚入', 'AP → 已付']
+        ] },
+        { hi: 'freight', page: 'logi', where: '物流成本页（要付的运费）', btn: '高亮 物流成本 字段', fields: [
+          ['运费(元)', '该批货的运费（付给物流公司，独立于货款）', '运费 AP 金额'],
+          ['付款周', '运费哪一周付（计入该周“物流运费”）', '运费 AP 时间']
+        ] }
+      ]
     },
     fd: {
-      label: '未发货 · 预测', color: 'var(--orchid)', page: 'assume',
-      title: 'FD · 预测（还没发货、还没收款）',
-      what: '还没发生的销售。金额和时间都要预测，系统按“单价 × 销量 × 当周回款率”自动算出预计收款。',
-      where: '「假设」标签页设定驱动因子；结果在「预测」标签页查看，可逐周覆盖。',
-      fields: [
-        ['销售单价(元/株)', '每个渠道/规格每株的价格', 'FD 收入'],
-        ['销量与淘汰(株/周)', '每周各渠道卖出的株数 + 预测淘汰率', 'FD 收入'],
-        ['当周回款率', '当周销售里有多少比例当周就收到（0.7 = 70%）', 'FD 收款时间'],
-        ['种苗 / 物料 / 运营 等', '各项支出的预测（每月 / 每周）', 'FP 支出预测'],
-        ['预测页 · 逐周覆盖', '某周想手动改预测值就直接填（留空＝用假设）', 'FD 覆盖']
-      ],
-      hooks: '汇总进现金轨迹的【橙色点线“预测(FD)”】（贯穿全年），以及报告里的【预测】列。'
+      label: '未发货 · 预测', color: 'var(--orchid)',
+      what: '还没发生的销售与支出。金额和时间都要预测，系统按“单价 × 销量 × 当周回款率”自动算出预计收款。',
+      lifecycle: '先在「假设」设定驱动因子，再到「预测」看结果、按需逐周覆盖。',
+      hooks: '橙色点线“预测(FD)”贯穿全年，以及报告里的【预测】列。',
+      steps: [
+        { hi: 'fd', page: 'assume', where: '假设页（设定驱动因子）', btn: '高亮 假设 驱动因子', fields: [
+          ['销售单价(元/株)', '每渠道/规格每株价格', 'FD 收入'],
+          ['销量与淘汰(株/周)', '每周株数 + 预测淘汰率', 'FD 收入'],
+          ['当周回款率', '当周销售当周收回的比例（0.7=70%）', 'FD 收款时间'],
+          ['种苗/物料/运营 等', '各项支出预测（每月/每周）', 'FP 支出预测']
+        ] },
+        { hi: 'fcst', page: 'fcst', where: '预测页（看结果·逐周覆盖）', btn: '高亮 预测 覆盖框', fields: [
+          ['收款 / 付款 逐周覆盖', '某周想手动改预测值就直接填（留空＝采用假设）', 'FD / FP 覆盖']
+        ] }
+      ]
     }
   };
+
+  // flat lookup: step hiKey → its stage/page/fields/colour (for the banner + render guard)
+  var TUT_STEPS = {};
+  ['hd', 'ar', 'fd'].forEach(function (sk) {
+    TUT[sk].steps.forEach(function (st) { TUT_STEPS[st.hi] = { stage: sk, page: st.page, where: st.where, fields: st.fields, color: TUT[sk].color }; });
+  });
+
+  function tutFieldTable(fields, color) {
+    var rows = fields.map(function (f) {
+      return '<tr><td style="padding:7px 6px; border-bottom:1px solid #f1ebdf; font-weight:600;">' + esc(f[0]) + '</td>' +
+        '<td style="padding:7px 6px; border-bottom:1px solid #f1ebdf; color:#4a4136;">' + esc(f[1]) + '</td>' +
+        '<td style="padding:7px 6px; border-bottom:1px solid #f1ebdf; color:' + color + '; font-weight:600;">' + esc(f[2]) + '</td></tr>';
+    }).join('');
+    return '<table style="width:100%; border-collapse:collapse; font-size:12.5px; margin:8px 0 4px;"><thead><tr style="color:var(--muted); font-size:11px;">' +
+      '<th style="text-align:left; font-weight:500; padding:6px;">字段</th><th style="text-align:left; font-weight:500; padding:6px;">填什么</th><th style="text-align:left; font-weight:500; padding:6px;">连接到</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
 
   function renderTutorial() {
     var order = ['hd', 'ar', 'fd'], stage = TUT[tutDoc] ? tutDoc : 'hd', t = TUT[stage];
@@ -983,39 +1013,38 @@
         '<div class="num" style="font-size:16px; font-weight:700;">' + k.toUpperCase() + '</div>' +
         '<div style="font-size:11px; opacity:.9; margin-top:2px;">' + esc(x.label) + '</div></button>';
     }).join('');
-    var rows = t.fields.map(function (f) {
-      return '<tr><td style="padding:8px 6px; border-bottom:1px solid #f1ebdf; font-weight:600;">' + esc(f[0]) + '</td>' +
-        '<td style="padding:8px 6px; border-bottom:1px solid #f1ebdf; color:#4a4136;">' + esc(f[1]) + '</td>' +
-        '<td style="padding:8px 6px; border-bottom:1px solid #f1ebdf; color:' + t.color + '; font-weight:600;">' + esc(f[2]) + '</td></tr>';
+    var steps = t.steps.map(function (st, i) {
+      return '<div style="border:1px solid var(--line); border-radius:11px; padding:12px 14px; margin-bottom:12px; background:#fffdf8;">' +
+        '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">' +
+          '<div style="font-size:13.5px; font-weight:700; color:' + t.color + ';">步骤 ' + (i + 1) + ' · ' + esc(st.where) + '</div>' +
+          '<button data-action="tutHi" data-stage="' + st.hi + '" data-page="' + st.page + '" style="background:' + t.color + '; color:#fff; border:none; border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap;">' + esc(st.btn) + ' →</button>' +
+        '</div>' + tutFieldTable(st.fields, t.color) +
+      '</div>';
     }).join('');
     return '<div>' +
       card('<div class="serif" style="font-size:18px; font-weight:700; margin-bottom:6px;">三步看懂这套系统</div>' +
-        '<div style="font-size:13px; color:#3a342a; line-height:1.75;">每一笔生意都会经过三个阶段，像水一样从“预测”流到“收到”：<br>' +
-        '<b style="color:var(--orchid);">FD 预测</b>（还没发货）→ <b style="color:#3f8f6b;">AR 应收</b>（已发货、等收钱）→ <b style="color:var(--plum);">HD 已收</b>（钱到账，结束）。<br>' +
-        '你在不同标签页录入不同阶段的数据，系统自动把它们画到“现金轨迹”上并互相对比。点下面任意一块，看它怎么填、连到哪里。</div>', ' margin-bottom:16px;') +
+        '<div style="font-size:13px; color:#3a342a; line-height:1.75;">每一笔生意像水一样从“预测”流到“收到/付出”：<br>' +
+        '<b style="color:var(--orchid);">FD 预测</b>（还没发货）→ <b style="color:#3f8f6b;">AR 已订</b>（已登记、等结算）→ <b style="color:var(--plum);">HD 已结算</b>（钱到账/付清）。<br>' +
+        '收钱和付钱都走这三步。点下面任意一块，看它每个页面怎么填、连到哪里。</div>', ' margin-bottom:16px;') +
       '<div style="display:flex; gap:12px; margin-bottom:16px;">' + sel + '</div>' +
-      card('<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;"><span style="width:11px; height:11px; border-radius:50%; background:' + t.color + ';"></span><div class="serif" style="font-size:17px; font-weight:700;">' + esc(t.title) + '</div></div>' +
-        '<div style="font-size:13.5px; color:#3a342a; line-height:1.7; margin-bottom:12px;"><b>是什么：</b>' + esc(t.what) + '</div>' +
-        '<div style="font-size:13px; color:#3a342a; margin-bottom:14px;"><b>在哪里填：</b>' + esc(t.where) + '</div>' +
-        '<table style="width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:14px;"><thead><tr style="color:var(--muted); font-size:11.5px;">' +
-          '<th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">字段</th>' +
-          '<th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">填什么</th>' +
-          '<th style="text-align:left; font-weight:500; padding:7px 6px; border-bottom:1px solid var(--line);">连接到</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-        '<div style="font-size:12.5px; color:var(--muted); margin-bottom:16px;"><b>最终去向：</b>' + esc(t.hooks) + '</div>' +
-        '<button data-action="tutHi" data-stage="' + stage + '" data-page="' + t.page + '" style="background:' + t.color + '; color:#fff; border:none; border-radius:10px; padding:11px 18px; font-size:13.5px; font-weight:700; cursor:pointer;">在页面中高亮这些字段 →</button>') +
+      card('<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;"><span style="width:11px; height:11px; border-radius:50%; background:' + t.color + ';"></span><div class="serif" style="font-size:17px; font-weight:700;">' + stage.toUpperCase() + ' · ' + esc(t.label) + '</div></div>' +
+        '<div style="font-size:13.5px; color:#3a342a; line-height:1.7; margin-bottom:6px;"><b>是什么：</b>' + esc(t.what) + '</div>' +
+        '<div style="font-size:13px; color:#3a342a; margin-bottom:14px;"><b>怎么用：</b>' + esc(t.lifecycle) + '</div>' +
+        steps +
+        '<div style="font-size:12.5px; color:var(--muted);"><b>最终去向：</b>' + esc(t.hooks) + '</div>') +
     '</div>';
   }
 
-  function renderTutBanner(stage) {
-    var t = TUT[stage];
-    var items = t.fields.map(function (f) { return '<li style="margin-bottom:2px;"><b>' + esc(f[0]) + '</b> — ' + esc(f[1]) + '</li>'; }).join('');
-    return '<div class="no-print" style="background:#fffaf0; border:1px solid ' + t.color + '; border-left:5px solid ' + t.color + '; border-radius:12px; padding:12px 16px; margin-bottom:16px;">' +
+  function renderTutBanner(hi) {
+    var s = TUT_STEPS[hi]; if (!s) return '';
+    var items = s.fields.map(function (f) { return '<li style="margin-bottom:2px;"><b>' + esc(f[0]) + '</b> — ' + esc(f[1]) + '</li>'; }).join('');
+    return '<div class="no-print" style="background:#fffaf0; border:1px solid ' + s.color + '; border-left:5px solid ' + s.color + '; border-radius:12px; padding:12px 16px; margin-bottom:16px;">' +
       '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' +
-        '<span style="font-size:11px; font-weight:700; color:#fff; background:' + t.color + '; padding:2px 8px; border-radius:6px;">教程 · ' + stage.toUpperCase() + '</span>' +
-        '<span style="font-size:13px; font-weight:700;">' + esc(t.title) + '</span>' +
+        '<span style="font-size:11px; font-weight:700; color:#fff; background:' + s.color + '; padding:2px 8px; border-radius:6px;">教程 · ' + s.stage.toUpperCase() + '</span>' +
+        '<span style="font-size:13px; font-weight:700;">' + esc(s.where) + '</span>' +
         '<span style="margin-left:auto; display:flex; gap:8px;">' +
           '<button data-action="nav" data-page="tut" style="background:#fff; border:1px solid var(--field-bd); border-radius:8px; padding:6px 11px; font-size:12px; cursor:pointer;">返回教程</button>' +
-          '<button data-action="tutExit" style="background:' + t.color + '; color:#fff; border:none; border-radius:8px; padding:6px 11px; font-size:12px; font-weight:700; cursor:pointer;">退出高亮</button>' +
+          '<button data-action="tutExit" style="background:' + s.color + '; color:#fff; border:none; border-radius:8px; padding:6px 11px; font-size:12px; font-weight:700; cursor:pointer;">退出高亮</button>' +
         '</span>' +
       '</div>' +
       '<div style="font-size:12px; color:#4a4136; margin-top:8px;">金色高亮的就是要填的字段：<ul style="margin:6px 0 0; padding-left:18px; line-height:1.6;">' + items + '</ul></div>' +
@@ -1055,7 +1084,7 @@
     var f = captureFocus();
     var V = buildView(state);
     var pageFn = PAGES[V.page] || renderDash;
-    var hiOn = tutHi && TUT[tutHi] && V.page === TUT[tutHi].page;   // only glow on the stage's own page
+    var hiOn = tutHi && TUT_STEPS[tutHi] && V.page === TUT_STEPS[tutHi].page;   // only glow on the step's own page
     var tutBanner = hiOn ? renderTutBanner(tutHi) : '';
     root.innerHTML = renderHeader(V) +
       '<main style="flex:1; min-width:0; display:flex; flex-direction:column;">' +

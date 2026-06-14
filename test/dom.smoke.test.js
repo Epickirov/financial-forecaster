@@ -82,13 +82,18 @@ ok(chipsBtns.length > 0, 'forecast week chips present');
 click(chipsBtns[chipsBtns.length - 1]);
 ok(true, 're-render after selecting a future week did not throw');
 
-// 7b) interactive tutorial: page renders, stage select works, highlight sets data-tut
+// 7b) interactive tutorial covers every data-entry page with field highlighting
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'tut'));
-ok(app.innerHTML.includes('三步看懂') && app.innerHTML.includes('在页面中高亮'), 'tutorial page renders with the stage guide');
+ok(app.innerHTML.includes('三步看懂') && app.innerHTML.includes('高亮'), 'tutorial page renders with stage guides + highlight buttons');
 click([...app.querySelectorAll('[data-action="tutSelect"]')].find(b => b.dataset.stage === 'ar'));
-ok(app.innerHTML.includes('应收账款（已出货'), 'selecting AR shows the AR guide section');
-click([...app.querySelectorAll('[data-action="tutHi"]')].find(b => b.dataset.stage === 'ar'));
-ok(app.getAttribute('data-tut') === 'ar' && app.innerHTML.includes('教程 · AR'), 'AR highlight jumps to 应收账款 and flags data-tut="ar"');
+ok(app.innerHTML.includes('苗/花应付款') && app.innerHTML.includes('物流成本'), 'AR stage covers 应收 + 应付 (苗/花应付款 + 物流成本)');
+click([...app.querySelectorAll('[data-action="tutHi"]')].find(b => b.dataset.stage === 'ap'));
+ok(app.getAttribute('data-tut') === 'ap' && app.innerHTML.includes('教程 · AR'), '苗/花应付款 highlight sets data-tut="ap" on the seedpay page');
+click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'tut'));
+click([...app.querySelectorAll('[data-action="tutSelect"]')].find(b => b.dataset.stage === 'fd'));
+ok(app.innerHTML.includes('预测页'), 'FD stage points to the 预测 page');
+click([...app.querySelectorAll('[data-action="tutHi"]')].find(b => b.dataset.stage === 'fcst'));
+ok(app.getAttribute('data-tut') === 'fcst' && app.innerHTML.includes('教程 · FD'), '预测 highlight sets data-tut="fcst" on the 预测 page');
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'dash'));
 ok(app.getAttribute('data-tut') === '', 'manual nav clears the tutorial highlight');
 
