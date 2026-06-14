@@ -84,8 +84,13 @@ summary::marker{ content:''; }
   /* slimmer page + card chrome so content isn't squeezed */
   main > div{ padding:14px 12px 48px !important; }
   .card{ padding:15px !important; overflow-x:auto; }
-  /* compact headers (the nav + fiscal-year controls already wrap / scroll) */
-  header{ padding:10px 12px !important; }
+  /* compact headers */
+  header{ padding:8px 12px !important; }
+  /* top app-bar: hide the email and drop the nav to its OWN full-width row, with
+     all tabs wrapping onto multiple lines (instead of a zero-width scroll strip) */
+  header.appbar{ flex-wrap:wrap !important; row-gap:8px !important; }
+  header.appbar nav{ order:3; flex-basis:100% !important; flex-wrap:wrap !important; overflow:visible !important; margin:0 !important; justify-content:flex-start !important; }
+  .appbar-email{ display:none !important; }
   /* wide tables scroll inside their card instead of breaking the page width */
   main table{ min-width:0; }
   /* keep KPI tiles 2-up — defined AFTER the grid rule so it wins the tie */

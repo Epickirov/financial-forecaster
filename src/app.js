@@ -387,7 +387,7 @@
     }).join('');
 
     return '' +
-      '<header class="no-print bg-fabric" style="display:flex; align-items:center; gap:16px; padding:10px 24px; border-bottom:1px solid #d9cfb9; position:sticky; top:0; z-index:30;">' +
+      '<header class="no-print bg-fabric appbar" style="display:flex; align-items:center; gap:16px; padding:10px 24px; border-bottom:1px solid #d9cfb9; position:sticky; top:0; z-index:30;">' +
         '<div style="display:flex; align-items:center; gap:11px; flex:none;">' +
           logoBox(34, 9) +
           '<div style="line-height:1.18;">' +
@@ -397,7 +397,7 @@
         '</div>' +
         '<nav style="display:flex; align-items:center; justify-content:center; gap:2px; flex:1; margin:0 8px; flex-wrap:nowrap; overflow-x:auto;">' + nav + '</nav>' +
         '<div style="display:flex; align-items:center; gap:8px; flex:none;">' +
-          (currentUser && currentUser.email ? '<span title="' + escA(currentUser.email) + '" style="font-size:11px; color:var(--muted); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(currentUser.email) + '</span>' : '') +
+          (currentUser && currentUser.email ? '<span class="appbar-email" title="' + escA(currentUser.email) + '" style="font-size:11px; color:var(--muted); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(currentUser.email) + '</span>' : '') +
           '<button data-action="logout" style="background:#fff; border:1px solid var(--field-bd); color:var(--plum2); font-size:11.5px; padding:7px 12px; border-radius:8px; cursor:pointer;">退出</button>' +
         '</div>' +
       '</header>' +
