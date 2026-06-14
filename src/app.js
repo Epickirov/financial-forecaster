@@ -190,6 +190,7 @@
       var sub = '';
       if (f === 'seedling') sub = '本周(第' + (curW + 1) + '周)应付苗款合计 ' + fmt(E.dueInWeek(S, curW, '苗'));
       else if (f === 'flowering') sub = '本周(第' + (curW + 1) + '周)应付开花株款合计 ' + fmt(E.dueInWeek(S, curW, '花'));
+      else if (f === 'freight') sub = '本周(第' + (curW + 1) + '周)应付运费合计 ' + fmt(E.freightDueInWeek(S, curW));
       return { key: selIdx + ':' + f, label: label, sub: sub, val: (S.fcst[selIdx + ':' + f]) != null ? S.fcst[selIdx + ':' + f] : '', ph: '≈' + yuan0(E.computed(S, selIdx)[f] || 0) };
     }
     var fcstReceiptRows = recDefs.map(function (d) { return fcstRow(d[0], d[1]); });
@@ -814,7 +815,7 @@
     return '<div>' +
       '<div style="display:grid; grid-template-columns:1.3fr 2fr; gap:14px; margin-bottom:16px;">' +
         '<div style="background:#b07a52; color:#fff; border-radius:15px; padding:18px 20px;"><div style="font-size:13px; color:#f0ddc9;">物流成本（运费）合计</div><div class="num" style="font-size:27px; font-weight:600; margin-top:6px;">' + esc(V.freightTotal) + '</div></div>' +
-        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); display:flex; align-items:center;"><div style="font-size:11.5px; color:var(--muted); line-height:1.6;">每批运费按所选「付款周」计入该周<b style="color:var(--plum);">生产物资运费</b>现金流，体现在现金轨迹与支出结构中。批次本身在「历史数据 · 进货验货」维护。</div></div>' +
+        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line); display:flex; align-items:center;"><div style="font-size:11.5px; color:var(--muted); line-height:1.6;">每批运费按所选「付款周」计入该周<b style="color:var(--plum);">物流运费</b>现金流（独立类别 · 收款人为物流公司），体现在现金轨迹与支出结构中。批次本身在「历史数据 · 进货验货」维护。</div></div>' +
       '</div>' +
       card('<div style="margin-bottom:12px;">' + h2('各批次运费') + '<div style="font-size:12px; color:var(--muted);">为每个进货批次登记运费与付款周</div></div>' +
         (rows || '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">暂无批次 · 先在「历史数据 · 进货验货」录入</div>')) +

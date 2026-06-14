@@ -132,7 +132,9 @@ test('scheduled payables become that week 苗/花 outflow; freight hits material
   approx(E.computed(s, wT).seedling, 310065); // payables override the assumption baseline
   approx(E.computed(s, wT).flowering, 40366);
   approx(E.freightDueInWeek(s, wT), 1046.6 + 687 + 1432.31, 1e-3);
-  approx(E.payOf(s, wT, 'materials') - E.eff(s, wT, 'materials'), E.freightDueInWeek(s, wT), 1e-3);
+  // 运费 is now its OWN category (AP = booked per-shipment freight), no longer folded into 生产物资
+  approx(E.computed(s, wT).freight, 1046.6 + 687 + 1432.31, 1e-3);
+  approx(E.payOf(s, wT, 'materials'), E.eff(s, wT, 'materials'), 1e-3); // materials carries no freight now
 });
 
 test('payableBuckets groups by 渠道 × time-bucket × 紧急度 and respects splits', function () {
