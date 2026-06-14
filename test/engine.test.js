@@ -101,6 +101,28 @@ test('应收账款: falls back to per-customer 回款周 when shipment has no da
   approx(E.arDueInWeek(s, cw).domestic, 186000);
 });
 
+// ---- never-sum: FD (forecast) and AR (booked) are parallel, never combined --
+test('computed.foreign/domestic are FD-only; AR is a parallel band, not summed in', function () {
+  var s = fresh();
+  var c = E.computed(s, 16);                       // ar2 (国外 515000) collects wk16
+  approx(c.foreign, c._foreignSales);              // foreign = forecast sales collection ONLY
+  approx(c.domestic, c._domSales);
+  approx(c._arForeign, 515000);                    // AR is exposed separately as its own band
+  assert.ok(Math.abs(c.foreign - (c._foreignSales + c._arForeign)) > 1, 'foreign excludes the AR band');
+});
+
+// ---- the committed (booked-AR) projection line ---------------------------
+test('committedCloses branches from the actual balance and projects on booked AR only, then stops', function () {
+  var s = fresh();
+  var cc = E.committedCloses(s), ser = E.series(s), cw = E.currentWeekIdx(s);  // cw = 16
+  approx(cc[cw - 1], ser[cw - 1].close);           // branches from the last settled week's actual balance
+  assert.ok(cc[cw] != null, 'committed line defined through the AR horizon (wk16)');
+  assert.strictEqual(cc[cw + 1], null, 'committed line stops once bookings run out');
+  // wk16 step adds ONLY booked AR (515000), not forecast sales
+  var pays = E.PAYCATS.reduce(function (a, p) { return a + E.fcPayOf(s, cw, p); }, 0);
+  approx(cc[cw], cc[cw - 1] + 515000 - pays);
+});
+
 // ---- 苗/花应付款 register drives 苗款/开花株款 timing; freight → materials --
 test('scheduled payables become that week 苗/花 outflow; freight hits materials', function () {
   var s = fresh();

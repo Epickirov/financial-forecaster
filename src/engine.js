@@ -272,12 +272,12 @@
     var domGross = qDL * g('priceDomLarge') + qDS * g('priceDomSmall') + qDDye * g('priceDomDye') + qDCut * g('priceDomCut');
     var collectWeek = g('collectInWeek');                  // 当周回款率
 
-    var arDue = arDueInWeek(state, wIdx);                   // 应收账款 collected this week (国外 / 国内)
+    var arDue = arDueInWeek(state, wIdx);                   // 应收账款 booked for this week (国外/国内) — a PARALLEL band
     var foreignSales = foreignGross * collectWeek;
     var domSales = domGross * collectWeek;
-    var foreign = foreignSales + arDue.foreign;
-    var arCollect = arDue.domestic;                         // 应收账款 → 国内收款 (separate line)
-    var domestic = domSales + arCollect;
+    var foreign = foreignSales;                             // FD only — AR is NEVER summed in (separate committed band)
+    var arCollect = arDue.domestic;                         // AR band (国内), kept as a breakdown helper
+    var domestic = domSales;                                // FD only
 
     // 苗款 / 开花株款: scheduled payables due this week (from the register), else assumption baseline
     var dueMiao = dueInWeek(state, wIdx, '苗'), dueHua = dueInWeek(state, wIdx, '花');
@@ -370,6 +370,31 @@
     return out;
   }
 
+  // committed (booked) balance trajectory — the SECOND dotted line. It follows
+  // the actual balance up to the as-of week, then projects FORWARD using ONLY
+  // booked 应收账款 collection (no forecast sales) minus the same scheduled
+  // outflow basis as the forecast line. Entries are null before the branch and
+  // after the last week any AR collects (the line simply stops — bookings only
+  // reach a few weeks out). The vertical gap to forecastCloses = reliance on
+  // not-yet-booked sales.
+  function committedCloses(state) {
+    var W = weeks(state), cw = currentWeekIdx(state), ser = series(state);
+    var out = W.map(function () { return null; });
+    var horizon = -1;
+    (state.arShipments || []).forEach(function (sh) { var w = arCollectWeek(state, sh); if (w != null && w >= cw && w > horizon) horizon = w; });
+    if (horizon < cw) return out;                          // no forward bookings → no committed line
+    var branch = cw > 0 ? cw - 1 : 0;
+    var bal = cw > 0 ? ser[cw - 1].close : num(state.config.openingBalance);
+    out[branch] = bal;
+    for (var i = cw; i <= horizon && i < W.length; i++) {
+      var ar = arDueInWeek(state, i);
+      var pays = PAYCATS.reduce(function (s, c) { return s + fcPayOf(state, i, c); }, 0);
+      bal = bal + (ar.foreign + ar.domestic) - pays;
+      out[i] = bal;
+    }
+    return out;
+  }
+
   // ---------- formatting ---------------------------------------------------
   function fmt(state, y) {
     if (state.config.unit === '万') {
@@ -412,7 +437,7 @@
     customerOutstanding: customerOutstanding, arDueInWeek: arDueInWeek,
     customerById: customerById, weekIdxOf: weekIdxOf, arLag: arLag, arCollectWeek: arCollectWeek, AR_LAG_KEY: AR_LAG_KEY, AR_LAG_DEFAULT: AR_LAG_DEFAULT,
     computed: computed, isHist: isHist, fcOf: fcOf, acOf: acOf, eff: eff, payOf: payOf, fcPayOf: fcPayOf,
-    series: series, forecastCloses: forecastCloses,
+    series: series, forecastCloses: forecastCloses, committedCloses: committedCloses,
     fmt: fmt, wan: wan, yuan0: yuan0, donut: donut
   };
 
