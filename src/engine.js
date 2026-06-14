@@ -245,7 +245,7 @@
     // 苗款 / 开花株款: scheduled payables due this week (from the register), else assumption baseline
     var dueMiao = dueInWeek(state, wIdx, '苗'), dueHua = dueInWeek(state, wIdx, '花');
     var seedling = dueMiao > 0 ? dueMiao : g('seedlingMonthly') / WPM * g('seedlingPrice');
-    var flowering = dueHua > 0 ? dueHua : volW * 0.12 * g('priceDomLarge') * 0.2;
+    var flowering = dueHua;                                 // 开花株款 = 花 payables due this 付款周; NOT from 假设
     var payroll = g('payrollMonthly') / WPM;
     var utilrent = g('utilitiesMonthly') / WPM + monthlyFrom(state.rents, m) / WPM;
     var projects = g('projectsMonthly') / WPM;

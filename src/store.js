@@ -84,6 +84,10 @@
         { id: 'sh_c', type: '苗', channel: '国内', supplier: '漳州新百盛', spec: '2.8寸成熟苗', qty: '', amount: '', iq: '', freight: '', freightWeek: '' },
         { id: 'sh_d', type: '花', channel: '国内', supplier: '佛山润喆卉', spec: '3.5寸开花株', qty: '', amount: '', iq: '', freight: '', freightWeek: '' }
       ],
+      suppliers: [
+        { id: 'sup_a', name: '山东绿航' }, { id: 'sup_b', name: '和鸣花卉' },
+        { id: 'sup_c', name: '漳州新百盛' }, { id: 'sup_d', name: '佛山润喆卉' }
+      ],
       payables: [], arShipments: [],
       sales: {}, fcst: {}, actual: {}
     };
@@ -176,7 +180,8 @@
   Store.prototype.addRow = function (arr, seed) {
     var tmpl;
     if (arr === 'customers') tmpl = { id: 'c_' + Math.random().toString(36).slice(2, 8), name: '新客户', cat: '国内', note: '', collectWeek: '' };
-    else if (arr === 'shipments') tmpl = { id: 'sh_' + Math.random().toString(36).slice(2, 8), type: '苗', channel: '国内', supplier: '新供应商', spec: '', qty: '', amount: '', iq: '', freight: '', freightWeek: '' };
+    else if (arr === 'suppliers') tmpl = { id: 'sup_' + Math.random().toString(36).slice(2, 8), name: '新供应商' };
+    else if (arr === 'shipments') tmpl = { id: 'sh_' + Math.random().toString(36).slice(2, 8), type: '苗', channel: '国内', supplier: '', spec: '', qty: '', amount: '', iq: '', freight: '', freightWeek: '' };
     else if (arr === 'payables') tmpl = { id: 'p_' + Math.random().toString(36).slice(2, 8), shipmentId: '', payWeek: '', amount: '', urgency: '三级' };
     else if (arr === 'arShipments') tmpl = { id: 'as_' + Math.random().toString(36).slice(2, 8), custId: '', value: '', date: '' };
     else tmpl = { name: '新条目', amount: '', months: '' };

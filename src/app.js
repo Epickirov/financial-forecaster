@@ -240,6 +240,8 @@
         unit: num(sh.qty) > 0 ? (num(sh.amount) / num(sh.qty)).toFixed(2) : '—',
         freight: sh.freight != null ? sh.freight : '', freightWeek: (sh.freightWeek === '' || sh.freightWeek == null) ? '' : parseInt(sh.freightWeek, 10) };
     });
+    var supplierRows = (S.suppliers || []).map(function (sp, i) { return { idx: i, id: sp.id, name: sp.name != null ? sp.name : '' }; });
+    var supplierNames = (S.suppliers || []).map(function (sp) { return sp.name; }).filter(function (n) { return n; });
     var payablesView = (S.payables || []).map(function (p, i) {
       var m = E.payableMeta(S, p);
       return { idx: i, id: p.id, shipmentId: p.shipmentId || '', type: m.type, channel: m.channel,
@@ -352,7 +354,7 @@
       salesRows: salesRows, salesQstr: salesQsum.toLocaleString('zh-CN'), salesAstr: fmt(salesAsum),
       fcstReceiptRows: fcstReceiptRows, fcstPayRows: fcstPayRows, histReceiptRows: histReceiptRows, histPayRows: histPayRows,
       revBreak: revBreak, revBreakForeign: revBreakForeign, revBreakDom: revBreakDom,
-      shipmentRows: shipmentRows, payablesView: payablesView, bucketsMiao: bucketsMiao, bucketsHua: bucketsHua,
+      shipmentRows: shipmentRows, supplierRows: supplierRows, supplierNames: supplierNames, payablesView: payablesView, bucketsMiao: bucketsMiao, bucketsHua: bucketsHua,
       freightTotal: fmt(freightTotal), weeksList: weeksList, curW: curW, urgencyOptions: E.URGENCY_OPTIONS,
       upcoming: upcoming, assumeGroups: assumeGroups, rents: S.rents, fixed: S.fixed,
       custRows: custRows, arOutWan: fmt(arOut), catSummary: catSummary, catOptions: E.AR_CATS,
@@ -533,13 +535,27 @@
 
     var shipTypeOpt = function (sel) { return E.PTYPES.map(function (t) { return '<option value="' + t.id + '"' + (t.id === sel ? ' selected' : '') + '>' + (t.id === '花' ? '开花株' : '苗') + '</option>'; }).join(''); };
     var shipChanOpt = function (sel) { return E.CHANNELS.map(function (c) { return '<option value="' + escA(c) + '"' + (c === sel ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join(''); };
+    var supplierOpt = function (sel) {
+      var seen = {}, opts = '<option value="">— 供应商 —</option>';
+      V.supplierNames.forEach(function (n) { if (n && !seen[n]) { seen[n] = 1; opts += '<option value="' + escA(n) + '"' + (n === sel ? ' selected' : '') + '>' + esc(n) + '</option>'; } });
+      if (sel && !seen[sel]) opts += '<option value="' + escA(sel) + '" selected>' + esc(sel) + '</option>';
+      return opts;
+    };
+    var supPanel = '<div style="margin-bottom:12px; padding:9px 11px; background:#faf6ee; border-radius:9px; display:flex; align-items:center; gap:7px; flex-wrap:wrap;">' +
+      '<span style="font-size:12px; font-weight:600; color:var(--plum2); flex:none;">供应商名单</span>' +
+      V.supplierRows.map(function (sp) {
+        return '<span style="display:inline-flex; align-items:center; background:#fff; border:1px solid var(--field-bd); border-radius:7px; padding:1px 2px 1px 4px;">' +
+          '<input class="fld txt" ' + bArr('suppliers', sp.idx, 'name') + ' value="' + escA(sp.name) + '" style="width:92px; border:none; background:transparent; font-size:12px; padding:3px 2px;">' +
+          '<button data-action="delRow" data-arr="suppliers" data-idx="' + sp.idx + '" style="background:none; border:none; color:var(--rose); cursor:pointer; font-size:13px; opacity:.6;">×</button></span>';
+      }).join('') +
+      '<button data-action="addRow" data-arr="suppliers" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:7px; padding:4px 10px; font-size:11.5px; font-weight:600; cursor:pointer; flex:none;">+ 新增供应商</button></div>';
     function shipCell(r, key, val, mode) {
       return '<td style="padding:3px 4px; border-bottom:1px solid #f1ebdf;"><input class="fld' + (mode === 'txt' ? ' txt' : '') + '"' + (mode && mode !== 'txt' ? ' inputmode="' + mode + '"' : '') + ' ' + bArr('shipments', r.idx, key) + ' value="' + escA(val) + '" style="width:100%; ' + (mode === 'txt' ? '' : 'text-align:right; ') + 'border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 6px; font-size:12px;"></td>';
     }
     var ship = V.shipmentRows.map(function (r) {
       function selc(key, html) { return '<td style="padding:3px 4px; border-bottom:1px solid #f1ebdf;"><select class="fld txt" ' + bArr('shipments', r.idx, key) + ' style="width:100%; border:1px solid var(--field-bd); background:var(--field); border-radius:6px; padding:5px 4px; font-size:11.5px;">' + html + '</select></td>'; }
       return '<tr>' + selc('type', shipTypeOpt(r.type)) + selc('channel', shipChanOpt(r.channel)) +
-        shipCell(r, 'supplier', r.supplier, 'txt') + shipCell(r, 'spec', r.spec, 'txt') +
+        selc('supplier', supplierOpt(r.supplier)) + shipCell(r, 'spec', r.spec, 'txt') +
         shipCell(r, 'qty', r.qty, 'numeric') + shipCell(r, 'amount', r.amount, 'numeric') +
         '<td class="num" style="padding:3px 6px; border-bottom:1px solid #f1ebdf; text-align:right; color:var(--muted);">' + esc(r.unit) + '</td>' +
         shipCell(r, 'iq', r.iq, 'txt') +
@@ -570,6 +586,7 @@
           '</tbody></table>', ' grid-column:1 / -1;') +
         card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;"><div>' + h2('进货验货 · 按供应商') + '<div style="font-size:12px; color:var(--muted);">各供应商批次：类型 · 渠道 · 规格 · 数量 · 金额（单价自动）· IQ号 → 路由至「苗/花应付款」；运费见「物流成本」</div></div>' +
           '<button data-action="addRow" data-arr="shipments" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;">+ 添加进货验货项目</button></div>' +
+          supPanel +
           '<div style="overflow-x:auto;"><table style="border-collapse:collapse; font-size:12px; min-width:900px; width:100%;"><thead><tr style="color:var(--muted); font-size:11px;">' +
             ['类型', '渠道', '供应商', '规格', '数量(株)', '金额(元)', '单价', 'IQ号'].map(function (t, i) { return '<th style="text-align:' + (i >= 4 && i <= 6 ? 'right' : 'left') + '; font-weight:500; padding:6px 5px; border-bottom:1px solid var(--line);">' + t + '</th>'; }).join('') +
             '<th style="width:28px; border-bottom:1px solid var(--line);"></th></tr></thead>' +
@@ -1068,6 +1085,10 @@
     if (!Array.isArray(merged.arShipments)) merged.arShipments = [];
     if (!Array.isArray(merged.shipments)) merged.shipments = d.shipments;
     if (!Array.isArray(merged.payables)) merged.payables = [];
+    if (!Array.isArray(merged.suppliers)) {  // derive supplier list from existing shipment suppliers
+      var supSeen = {}; merged.suppliers = [];
+      (merged.shipments || []).forEach(function (sh) { var n = sh && sh.supplier; if (n && !supSeen[n]) { supSeen[n] = 1; merged.suppliers.push({ id: 'sup_' + Math.random().toString(36).slice(2, 8), name: n }); } });
+    }
     return merged;
   }
 
