@@ -70,6 +70,47 @@
 
   function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
+  // ---------- 农历财年 (lunar fiscal year) ---------------------------------
+  // 正月初一 (Chinese New Year / Spring Festival) Gregorian dates, 2024–2046.
+  // The company's 农历财年 runs 正月初一 → the day BEFORE next year's 正月初一
+  // (i.e. through 除夕), so the fiscal window is keyed to the lunar calendar and
+  // rolls automatically each year. Dates verified against published almanacs;
+  // extend this table to carry the auto window past 2046.
+  var LUNAR_NEW_YEAR = {
+    2024: '2024-02-10', 2025: '2025-01-29', 2026: '2026-02-17', 2027: '2027-02-06',
+    2028: '2028-01-26', 2029: '2029-02-13', 2030: '2030-02-03', 2031: '2031-01-23',
+    2032: '2032-02-11', 2033: '2033-01-31', 2034: '2034-02-19', 2035: '2035-02-08',
+    2036: '2036-01-28', 2037: '2037-02-15', 2038: '2038-02-04', 2039: '2039-01-24',
+    2040: '2040-02-12', 2041: '2041-02-01', 2042: '2042-01-22', 2043: '2043-02-10',
+    2044: '2044-01-30', 2045: '2045-02-17', 2046: '2046-02-06'
+  };
+
+  // shift an ISO calendar date by whole days, entirely in UTC (no timezone drift)
+  function isoAddDays(iso, n) {
+    var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // The 农历财年 window (正月初一 → 次年除夕) that CONTAINS asOfISO. Auto-rolls:
+  // once the as-of date crosses the year-end (除夕) the NEXT lunar year is returned.
+  // Dates before / after the table clamp to the first / last covered year.
+  function lunarFY(asOfISO) {
+    var ys = Object.keys(LUNAR_NEW_YEAR).map(Number).sort(function (a, b) { return a - b; });
+    var win = function (i) { return { year: ys[i], startISO: LUNAR_NEW_YEAR[ys[i]], endISO: isoAddDays(LUNAR_NEW_YEAR[ys[i + 1]], -1) }; };
+    var iso = (typeof asOfISO === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(asOfISO)) ? asOfISO : null;
+    if (iso === null) return win(0);
+    for (var i = 0; i < ys.length - 1; i++) { var w = win(i); if (iso >= w.startISO && iso <= w.endISO) return w; }
+    return iso < LUNAR_NEW_YEAR[ys[0]] ? win(0) : win(ys.length - 2);   // clamp out-of-range
+  }
+
+  // 干支 + 生肖 label for a (Gregorian) lunar-year number, e.g. 2026 → "丙午（马）年"
+  var GAN = '甲乙丙丁戊己庚辛壬癸', ZHI = '子丑寅卯辰巳午未申酉戌亥', ZODIAC = '鼠牛虎兔龙蛇马羊猴鸡狗猪';
+  function lunarYearLabel(y) {
+    if (!y) return '';
+    var i = ((y - 4) % 10 + 10) % 10, j = ((y - 4) % 12 + 12) % 12;
+    return GAN[i] + ZHI[j] + '（' + ZODIAC[j] + '）年';
+  }
+
   // ---------- week grid ----------------------------------------------------
   function genWeeks(startISO, endISO) {
     // Treat fiscal dates as plain CALENDAR dates and parse/format ENTIRELY in UTC,
@@ -88,7 +129,16 @@
     }
     return weeks;
   }
-  function weeks(state) { return genWeeks(state.config.startISO, state.config.endISO); }
+  // resolve the active fiscal window: MANUAL uses the stored dates; AUTO (default)
+  // derives 正月初一→次年除夕 from the lunar calendar based on the as-of date, so it
+  // rolls to the next 农历财年 on its own once 今日 passes the year-end.
+  function fyWindow(state) {
+    var cfg = (state && state.config) || {};
+    if (cfg.fyMode === 'manual' && cfg.startISO && cfg.endISO) return { startISO: cfg.startISO, endISO: cfg.endISO };
+    var w = lunarFY(cfg.asOfISO);
+    return { startISO: w.startISO, endISO: w.endISO, year: w.year };
+  }
+  function weeks(state) { var w = fyWindow(state); return genWeeks(w.startISO, w.endISO); }
 
   // the "current" week = the one containing the as-of date (the 今天 line).
   // Used for dashboard rollups that should mean "this week", independent of
@@ -428,6 +478,7 @@
     URGENCY_OPTIONS: URGENCY_OPTIONS, URGENCY_COLORS: URGENCY_COLORS,
     AR_CH: AR_CH,
     num: num,
+    LUNAR_NEW_YEAR: LUNAR_NEW_YEAR, isoAddDays: isoAddDays, lunarFY: lunarFY, lunarYearLabel: lunarYearLabel, fyWindow: fyWindow,
     genWeeks: genWeeks, weeks: weeks, currentWeekIdx: currentWeekIdx,
     effA: effA, inheritedA: inheritedA, effAN: effAN, monthlyFrom: monthlyFrom,
     shipmentById: shipmentById, shipUnit: shipUnit, payableMeta: payableMeta, payableAmt: payableAmt,

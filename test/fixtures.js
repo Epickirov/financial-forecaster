@@ -36,7 +36,7 @@ function demoModel() {
   return {
     page: 'dash',
     weekIdx: wTarget,
-    config: { name: '昆明统一生物', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: '2026-06-10', asOfManual: true, unit: '万', openingBalance: '4227701.72' },
+    config: { name: '昆明统一生物', fyMode: 'manual', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: '2026-06-10', asOfManual: true, unit: '万', openingBalance: '4227701.72' },
     assume: {
       priceForLarge: '19', priceForSmall: '16', priceForDye: '0', priceForCut: '0',
       priceDomLarge: '18.25', priceDomSmall: '15.07', priceDomDye: '40', priceDomCut: '7.5',

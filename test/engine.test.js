@@ -52,6 +52,55 @@ test('genWeeks is timezone-independent — Beijing (UTC+8) sees the same calenda
   assert.strictEqual(out[1].split('–')[0], '2.17', 'label matches startISO under Asia/Shanghai');
 });
 
+// ---- 农历财年 auto window (lunar calendar) -------------------------------
+test('lunarFY maps a date to its 正月初一→除夕 window and auto-rolls across years', function () {
+  var a = E.lunarFY('2026-06-23');                      // mid-2026 → the 丙午 lunar year
+  assert.strictEqual(a.startISO, '2026-02-17', 'FY starts at 正月初一 2026');
+  assert.strictEqual(a.endISO, '2027-02-05', 'FY ends the day before 正月初一 2027');
+  var b = E.lunarFY('2027-02-06');                      // the day year-end rolls over
+  assert.strictEqual(b.startISO, '2027-02-06', 'crossing 除夕 advances to the next 农历财年');
+  assert.strictEqual(b.endISO, '2028-01-25');
+  var c = E.lunarFY('2026-02-16');                      // just before 正月初一 → prior year
+  assert.strictEqual(c.startISO, '2025-01-29');
+  assert.strictEqual(c.endISO, '2026-02-16');
+});
+
+test('fyWindow: auto derives from the lunar calendar, manual uses stored dates', function () {
+  var auto = { config: { asOfISO: '2030-07-01', fyMode: 'auto', startISO: 'x', endISO: 'y' } };
+  var wa = E.fyWindow(auto);
+  assert.strictEqual(wa.startISO, '2030-02-03', 'CNY 2030 = Feb 3');
+  assert.strictEqual(wa.endISO, '2031-01-22', 'day before CNY 2031 (Jan 23)');
+  assert.ok(E.weeks(auto).some(function (w) { return '2030-07-01' >= w.startISO && '2030-07-01' <= w.endISO; }), 'as-of falls inside the auto grid');
+  var manual = { config: { asOfISO: '2030-07-01', fyMode: 'manual', startISO: '2026-02-17', endISO: '2027-02-05' } };
+  assert.strictEqual(E.fyWindow(manual).startISO, '2026-02-17', 'manual mode ignores the lunar calendar');
+  assert.strictEqual(E.lunarYearLabel(2026), '丙午（马）年', '干支 + 生肖 label for 2026');
+});
+
+test('defaultModel ships auto 农历财年; a 2026 as-of yields the legacy fiscal window', function () {
+  var d = FFStore.defaultModel();
+  assert.strictEqual(d.config.fyMode, 'auto', 'auto by default');
+  d.config.asOfISO = '2026-06-23';
+  var w = E.weeks(d);
+  assert.strictEqual(w[0].startISO, '2026-02-17', 'auto window starts 正月初一 2026');
+  assert.ok(w[w.length - 1].endISO <= '2027-02-05');
+});
+
+test('setFyMode / setAsOfMode mutate config as expected', function () {
+  var noop = function () {};
+  var s = new FFStore.Store({ load: function () { return null; }, save: noop, clear: noop });
+  s.state.config.asOfISO = '2026-06-23';
+  s.setFyMode('manual', '2026-02-17', '2027-02-05');
+  assert.strictEqual(s.state.config.fyMode, 'manual');
+  assert.strictEqual(s.state.config.startISO, '2026-02-17', 'manual seeds the stored window');
+  s.setFyMode('auto');
+  assert.strictEqual(s.state.config.fyMode, 'auto');
+  s.setAsOfMode('manual');
+  assert.strictEqual(s.state.config.asOfManual, true, 'manual pins the as-of');
+  s.setAsOfMode('auto');
+  assert.strictEqual(s.state.config.asOfManual, false, 'auto un-pins');
+  assert.strictEqual(s.state.config.asOfISO, FFStore.todayISO(), 'auto resets as-of to China today');
+});
+
 // ---- 今日/截至 tracks the real (China) date unless pinned --------------------
 test('asOfISO defaults to China today, refreshes on load, and pins once edited', function () {
   var today = FFStore.todayISO();

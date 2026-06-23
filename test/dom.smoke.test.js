@@ -40,7 +40,7 @@ ok(/财务总览/.test(app.innerHTML), 'dashboard title renders');
 ok(/全年收款/.test(app.innerHTML) && /现金轨迹/.test(app.innerHTML), 'KPI row + chart render');
 
 // 2) every nav page renders without throwing
-const pages = { hist: '销售明细', fcst: '收款测算', assume: '销量与淘汰', seedpay: '应付款登记', logi: '各批次运费', ar: '本周应收余额', report: '财务预测报告' };
+const pages = { hist: '销售明细', fcst: '收款测算', assume: '销量与淘汰', seedpay: '应付款登记', logi: '各批次运费', ar: '本周应收余额', report: '财务预测报告', settings: '今日基准（截至）' };
 Object.keys(pages).forEach(p => {
   click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === p));
   ok(app.innerHTML.includes(pages[p]), 'page "' + p + '" renders (' + pages[p] + ')');
@@ -65,9 +65,10 @@ const after = [...app.querySelectorAll('input[data-map="assumeWeek"]')].find(i =
 ok(after.value === '25', 'assumption value persisted to the store + re-rendered');
 ok(app.innerHTML.includes('本周覆盖'), 'override badge appears live after edit');
 
-// 5) opening balance is editable in the header and flows to the KPI
+// 5) opening balance lives on the settings page and flows to the KPI
+click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'settings'));
 const obal = $('#c\\|openingBalance') || window.document.getElementById('c|openingBalance');
-ok(obal, 'opening-balance input exists in the config header');
+ok(obal, 'opening-balance input exists on the settings page');
 obal.value = '9000000'; fire(obal, 'input');
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'dash'));
 ok(app.innerHTML.includes('900.00万'), 'opening balance edit reflows into 现可用款 KPI (900.00万)');

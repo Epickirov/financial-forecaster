@@ -41,7 +41,7 @@
     return {
       page: 'dash',
       weekIdx: 0,
-      config: { name: '昆明统一生物', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: todayISO(), asOfManual: false, unit: '万', openingBalance: '' },
+      config: { name: '昆明统一生物', fyMode: 'auto', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: todayISO(), asOfManual: false, unit: '万', openingBalance: '' },
       assume: {
         priceForLarge: '', priceForSmall: '', priceForDye: '', priceForCut: '',
         priceDomLarge: '', priceDomSmall: '', priceDomDye: '', priceDomCut: '',
@@ -205,6 +205,23 @@
   Store.prototype.delCustom = function (id) {
     this.state.customItems = this.state.customItems.filter(function (x) { return x.id !== id; });
     this._notify();
+  };
+
+  // 农历财年 mode: 'auto' lets the engine derive the window from the lunar calendar;
+  // 'manual' uses stored start/end dates. Switching to manual seeds those dates from
+  // the currently-displayed (computed) window so editing starts from the right place.
+  Store.prototype.setFyMode = function (mode, seedStart, seedEnd) {
+    var c = Object.assign({}, this.state.config);
+    c.fyMode = (mode === 'manual') ? 'manual' : 'auto';
+    if (c.fyMode === 'manual' && seedStart && seedEnd) { c.startISO = seedStart; c.endISO = seedEnd; }
+    this.state.config = c; this._notify();
+  };
+  // 截至(今日) mode: 'auto' tracks China-today (unpinned); 'manual' pins the stored date.
+  Store.prototype.setAsOfMode = function (mode) {
+    var c = Object.assign({}, this.state.config);
+    if (mode === 'manual') { c.asOfManual = true; }
+    else { c.asOfManual = false; c.asOfISO = todayISO(); }
+    this.state.config = c; this._notify();
   };
 
   Store.prototype.selectWeek = function (idx) { this.state.weekIdx = idx; this._notify(); };

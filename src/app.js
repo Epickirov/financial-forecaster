@@ -39,10 +39,10 @@
 
     var navDef = [
       { id: 'dash', label: '总览', sym: '◧' }, { id: 'hist', label: '历史数据', sym: '◷' },
-      { id: 'fcst', label: '预测', sym: '⤴' }, { id: 'assume', label: '假设', sym: '⚙' },
+      { id: 'fcst', label: '预测', sym: '⤴' }, { id: 'assume', label: '假设', sym: '∑' },
       { id: 'seedpay', label: '苗/花应付款', sym: '❀' }, { id: 'logi', label: '物流成本', sym: '⇄' },
       { id: 'ar', label: '应收账款', sym: '▤' }, { id: 'report', label: '管理层报告', sym: '⎙' },
-      { id: 'tut', label: '教程', sym: '✎' }
+      { id: 'settings', label: '设置', sym: '⚙' }, { id: 'tut', label: '教程', sym: '✎' }
     ];
     var page = S.page;
     var navItems = navDef.map(function (n) {
@@ -60,9 +60,12 @@
       logi: ['物流成本', '各批次运费 · 按付款周计入「生产物资运费」现金流'],
       ar: ['应收账款', '客户应收余额与每周预计回款'],
       report: ['管理层报告', '一页式 · 非财务人员也能读懂'],
+      settings: ['系统设置', '农历财年与今日基准 · 跨年自动切换'],
       tut: ['使用教程', '三步了解 HD / AR / FD 如何录入与联动']
     };
-    var fy = (S.config.startISO || '').slice(2).replace(/-/g, '.') + ' → ' + (S.config.endISO || '').slice(2).replace(/-/g, '.');
+    // 农历财年 window: AUTO derives from the lunar calendar (rolls yearly), MANUAL uses stored dates
+    var fyWin = E.fyWindow(S);
+    var fy = (fyWin.startISO || '').slice(2).replace(/-/g, '.') + ' → ' + (fyWin.endISO || '').slice(2).replace(/-/g, '.');
 
     // ---- series + chart geometry ----
     var ser = E.series(S);
@@ -352,6 +355,9 @@
     return {
       page: page, navItems: navItems, pageTitle: titles[page] ? titles[page][0] : '', pageSub: titles[page] ? titles[page][1] : '',
       cfg: S.config, fy: fy, unitLabel: '单位：' + S.config.unit,
+      fyMode: S.config.fyMode === 'manual' ? 'manual' : 'auto', fyStartISO: fyWin.startISO, fyEndISO: fyWin.endISO,
+      fyYearLabel: E.lunarYearLabel(E.lunarFY(S.config.asOfISO).year), fyWeeks: E.weeks(S).length,
+      asOfManual: !!S.config.asOfManual,
       dashKpis: dashKpis, varAggStr: varAggStr, varAggColor: varAggColor,
       yTicks: yTicks, xTicks: xTicks, trajArea: trajArea, trajForecast: forecastPts, trajActual: actualPts, trajCommitted: committedPts, asOfX: asOfX, asOfWeekNo: curW + 1, asOfDate: asOfMD,
       monthBars: monthBars, dashDonut: dashDonut, totalPayWan: wan(totalPay) + '万',
@@ -408,18 +414,15 @@
           '<div style="font-size:12px; color:#d8cbb0; margin-top:1px; white-space:nowrap;">' + esc(V.pageSub) + '</div>' +
         '</div>' +
         '<div style="flex:1;"></div>' +
-        '<div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); border-radius:11px; padding:7px 11px; flex-wrap:wrap;">' +
-          '<span style="font-size:11px; color:#ece0c8; font-weight:600;">农历财年</span>' +
-          '<input class="fld" type="date" ' + bCfg('startISO') + ' value="' + escA(V.cfg.startISO) + '" style="border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">' +
-          '<span style="color:#ece0c8;">→</span>' +
-          '<input class="fld" type="date" ' + bCfg('endISO') + ' value="' + escA(V.cfg.endISO) + '" style="border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">' +
-          '<span style="width:1px; height:20px; background:rgba(255,255,255,.2); margin:0 3px;"></span>' +
-          '<span style="font-size:11px; color:#ece0c8; font-weight:600;">截至</span>' +
-          '<input class="fld" type="date" ' + bCfg('asOfISO') + ' value="' + escA(V.cfg.asOfISO) + '" style="border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">' +
-          '<span style="width:1px; height:20px; background:rgba(255,255,255,.2); margin:0 3px;"></span>' +
-          '<span style="font-size:11px; color:#ece0c8; font-weight:600;">起初资金(元)</span>' +
-          '<input class="fld" inputmode="decimal" ' + bCfg('openingBalance') + ' value="' + escA(V.cfg.openingBalance) + '" title="农历财年起始可用资金（元）" style="width:118px; text-align:right; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:5px 7px; font-size:12px; color:var(--ink);">' +
-        '</div>' +
+        // Read-only context (NOT a data filter): the active 农历财年 + 今日. The
+        // editable controls now live on the 设置 page — clicking this chip opens it.
+        '<button data-action="nav" data-page="settings" title="农历财年 / 今日 · 点击进入系统设置" style="display:flex; align-items:center; gap:9px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); border-radius:11px; padding:6px 12px; cursor:pointer;">' +
+          '<span style="font-size:15px; color:#ecd9bf; line-height:1;">⚙</span>' +
+          '<span style="display:flex; flex-direction:column; gap:1px; line-height:1.3; text-align:left;">' +
+            '<span style="font-size:11px; color:#f3ead8; font-weight:600; white-space:nowrap;">农历财年 <span class="num">' + esc(V.fy) + '</span>' + (V.fyMode === 'auto' ? '' : ' <span style="color:#d8b48a;">·手动</span>') + '</span>' +
+            '<span style="font-size:10px; color:#cbb99c; white-space:nowrap;">截至 <span class="num">' + esc((V.cfg.asOfISO || '').slice(5).replace(/-/g, '.')) + '</span> · 第' + V.asOfWeekNo + '周' + (V.asOfManual ? ' ·手动' : '') + '</span>' +
+          '</span>' +
+        '</button>' +
         '<button data-action="toggleUnit" style="background:#f4efe3; color:#5a472b; border:none; border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:700; cursor:pointer;">' + esc(V.unitLabel) + '</button>' +
       '</header>';
   }
@@ -987,6 +990,64 @@
       '<th style="text-align:left; font-weight:500; padding:6px;">字段</th><th style="text-align:left; font-weight:500; padding:6px;">填什么</th><th style="text-align:left; font-weight:500; padding:6px;">连接到</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
+  // ---------- SETTINGS (农历财年 / 今日 / 起初资金) ----------
+  function renderSettings(V) {
+    // a two-segment radio-style mode toggle
+    var seg = function (action, mode, on, label, sub) {
+      return '<button data-action="' + action + '" data-mode="' + mode + '" style="flex:1; min-width:200px; cursor:pointer; text-align:left; border:1px solid ' + (on ? 'var(--plum)' : 'var(--line)') + '; background:' + (on ? 'rgba(124,58,75,.07)' : '#fff') + '; color:var(--ink); border-radius:12px; padding:12px 14px;">' +
+        '<div style="display:flex; align-items:center; gap:8px;"><span style="width:13px; height:13px; border-radius:50%; flex:none; border:2px solid ' + (on ? 'var(--plum)' : 'var(--muted)') + '; background:' + (on ? 'var(--plum)' : 'transparent') + '; box-shadow:' + (on ? 'inset 0 0 0 2px #fff' : 'none') + ';"></span>' +
+          '<span style="font-size:13.5px; font-weight:700;">' + esc(label) + '</span></div>' +
+        '<div style="font-size:11.5px; color:var(--muted); margin-top:5px; padding-left:21px;">' + esc(sub) + '</div></button>';
+    };
+    var dateFld = function (key, val) { return '<input class="fld" type="date" ' + bCfg(key) + ' value="' + escA(val) + '" style="' + FLD + ' color:var(--ink);">'; };
+    var readout = function (big, sub) {
+      return '<div style="background:#faf6ee; border:1px solid var(--line); border-radius:12px; padding:15px 18px;">' +
+        '<div class="num serif" style="font-size:21px; font-weight:800; color:var(--plum2); white-space:nowrap;">' + big + '</div>' +
+        '<div style="font-size:12.5px; color:#5a4f3f; margin-top:6px;">' + esc(sub) + '</div></div>';
+    };
+
+    var fyAuto = V.fyMode === 'auto';
+    var fyBody = fyAuto
+      ? readout(esc(V.fyStartISO) + '　→　' + esc(V.fyEndISO), V.fyYearLabel + ' · 共 ' + V.fyWeeks + ' 周 · 正月初一 → 次年除夕')
+      : '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' +
+          '<span style="font-size:12px; color:var(--muted);">起始</span>' + dateFld('startISO', V.cfg.startISO) +
+          '<span style="color:var(--muted);">→</span>' +
+          '<span style="font-size:12px; color:var(--muted);">结束</span>' + dateFld('endISO', V.cfg.endISO) + '</div>';
+    var fyCard = card(
+      '<div class="serif" style="font-size:17px; font-weight:700; margin-bottom:3px;">农历财年</div>' +
+      '<div style="font-size:12.5px; color:var(--muted); margin-bottom:14px;">决定整套系统的周网格与现金流年度范围 · 跨过除夕后自动切换到下一农历年（已预置至 2046 年）</div>' +
+      '<div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">' +
+        seg('setFyMode', 'auto', fyAuto, '自动（按农历）', '根据「今日」自动选用当前农历年度，无需手动调整') +
+        seg('setFyMode', 'manual', !fyAuto, '手动指定', '自行设定起止日期，不随农历切换') +
+      '</div>' + fyBody, ' margin-bottom:16px;');
+
+    var asAuto = !V.asOfManual;
+    var asBody = asAuto
+      ? readout(esc(V.cfg.asOfISO), '第 ' + V.asOfWeekNo + ' 周 · 每天按北京时间自动更新')
+      : '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' +
+          '<span style="font-size:12px; color:var(--muted);">截至日期</span>' + dateFld('asOfISO', V.cfg.asOfISO) +
+          '<span style="font-size:11.5px; color:var(--muted);">第 ' + V.asOfWeekNo + ' 周</span></div>';
+    var asCard = card(
+      '<div class="serif" style="font-size:17px; font-weight:700; margin-bottom:3px;">今日基准（截至）</div>' +
+      '<div style="font-size:12.5px; color:var(--muted); margin-bottom:14px;">区分「已发生(历史)」与「预测」的分界线，并定位现金轨迹上的「今日」标记</div>' +
+      '<div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">' +
+        seg('setAsOfMode', 'auto', asAuto, '自动（今天）', '按北京时间自动跟随当天') +
+        seg('setAsOfMode', 'manual', !asAuto, '手动指定', '锁定为指定日期，不再跟随今天') +
+      '</div>' + asBody, ' margin-bottom:16px;');
+
+    var obCard = card(
+      '<div class="serif" style="font-size:17px; font-weight:700; margin-bottom:3px;">起初资金</div>' +
+      '<div style="font-size:12.5px; color:var(--muted); margin-bottom:14px;">农历财年第一周的期初可用资金 · 全年现金轨迹由此起算</div>' +
+      '<div style="display:flex; align-items:center; gap:10px;">' +
+        '<input class="fld" inputmode="decimal" ' + bCfg('openingBalance') + ' value="' + escA(V.cfg.openingBalance) + '" title="农历财年起始可用资金（元）" style="' + FLD + ' width:220px; text-align:right; color:var(--ink);"><span style="font-size:13px; color:var(--muted);">元</span></div>');
+
+    var banner = '<div style="background:#fff8ec; border:1px solid var(--gold); border-left:5px solid var(--gold); border-radius:12px; padding:13px 16px; margin-bottom:18px; font-size:13px; color:#5a4f3f; line-height:1.75;">' +
+      '<b>说明：</b>本页设置的是整套系统的<b>年度基准</b>（农历财年）和<b>今日基准</b>，用于自动生成周数与现金流。' +
+      '这<b>不是</b>数据筛选 / 查看范围 —— 改这里不会隐藏或过滤任何已录入的数据。通常保持「自动」即可。</div>';
+
+    return '<div style="max-width:780px;">' + banner + fyCard + asCard + obCard + '</div>';
+  }
+
   function renderTutorial() {
     var order = ['hd', 'ar', 'fd'], stage = TUT[tutDoc] ? tutDoc : 'hd', t = TUT[stage];
     var sel = order.map(function (k) {
@@ -1041,7 +1102,7 @@
     '</div>';
   }
 
-  var PAGES = { dash: renderDash, hist: renderHist, fcst: renderFcst, assume: renderAssume, seedpay: renderSeedpay, logi: renderLogi, ar: renderAr, report: renderReport, tut: renderTutorial };
+  var PAGES = { dash: renderDash, hist: renderHist, fcst: renderFcst, assume: renderAssume, seedpay: renderSeedpay, logi: renderLogi, ar: renderAr, report: renderReport, settings: renderSettings, tut: renderTutorial };
 
   // ===================================================================
   //  MOUNT + EVENTS
@@ -1183,6 +1244,8 @@
       case 'tutHi': tutHi = btn.dataset.stage; store.setPage(btn.dataset.page); break;
       case 'tutExit': tutHi = null; break;
       case 'toggleUnit': store.toggleUnit(); break;
+      case 'setFyMode': { if (btn.dataset.mode === 'manual') { var fw = E.fyWindow(store.state); store.setFyMode('manual', fw.startISO, fw.endISO); } else store.setFyMode('auto'); break; }
+      case 'setAsOfMode': store.setAsOfMode(btn.dataset.mode); break;
       case 'selectWeek': store.selectWeek(+btn.dataset.idx); break;
       case 'pickWeek': store.editArr(btn.dataset.arr, +btn.dataset.idx, btn.dataset.key, +btn.dataset.week); break;
       case 'scrollChips': { var sc = document.getElementById('weekChipScroll'); if (sc && sc.scrollBy) sc.scrollBy({ left: (+btn.dataset.dir) * Math.max(sc.clientWidth * 0.8, 200), behavior: 'smooth' }); break; }
