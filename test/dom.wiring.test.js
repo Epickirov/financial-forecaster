@@ -65,10 +65,11 @@ const cases = [
   ['qtyDomLarge', '999999', s => E.computed(s, W).domestic, 'up'],
   ['qtyDomCut', '999999', s => E.computed(s, W).domestic, 'up'],   // 国内切花 now feeds 国内收款
   ['collectInWeek', '2', s => E.computed(s, W).domestic, 'up'],    // 当周回款率 multiplies 销售收款
-  ['seedlingMonthly', '500000', s => E.computed(s, W).seedling, 'up'],
-  ['seedlingPrice', '99', s => E.computed(s, W).seedling, 'up'],
-  ['pkgCost', '50', s => E.computed(s, W).materials, 'up'],
-  ['prodCost', '50', s => E.computed(s, W).materials, 'up'],
+  ['miaoAmount', '9000000', s => E.computed(s, W).seedling, 'up'],    // 苗金额 → 苗款 forecast
+  ['huaAmount', '9000000', s => E.computed(s, W).flowering, 'up'],    // 开花株金额 → 开花株款 forecast
+  ['bottleAmount', '9000000', s => E.computed(s, W).bottle, 'up'],    // 瓶苗款 forecast
+  ['pkgCost', '900000', s => E.computed(s, W).materials, 'up'],
+  ['prodCost', '900000', s => E.computed(s, W).materials, 'up'],
   ['payrollMonthly', '900000', s => E.computed(s, W).payroll, 'up'],
   ['utilitiesMonthly', '900000', s => E.computed(s, W).utilrent, 'up'],
   ['freightMonthly', '900000', s => E.computed(s, W).freight, 'up'],   // 运费 is its own category now
@@ -163,14 +164,10 @@ setMap('actual', /:foreign$/, '654321');
 ok(E.eff(S(), HW, 'foreign') === 654321, 'actual 国外收款 replaces forecast (eff) for elapsed week');
 ok(E.acOf(S(), HW, 'foreign') === 654321 && approx(E.fcOf(S(), HW, 'foreign'), E.computed(S(), HW).foreign), 'forecast value untouched by the actual (variance source intact)');
 
-// ---------- 6. FORECAST override beats the assumption ----------
+// ---------- 6. FORECAST page is read-only (driven entirely by 假设) ----------
 nav('fcst');
-click([...app.querySelectorAll('[data-action="selectWeek"]')][2]);
-const FW = sel();
-setMap('fcst', /:foreign$/, '777777');
-ok(E.fcOf(S(), FW, 'foreign') === 777777, 'forecast override applied');
-setMap('fcst', /:foreign$/, '');   // re-query: previous edit re-rendered the node
-ok(approx(E.fcOf(S(), FW, 'foreign'), E.computed(S(), FW).foreign), 'blank override falls back to the assumption value');
+ok(app.querySelectorAll('input[data-map="fcst"]').length === 0, '预测 page has no editable override inputs — read-only');
+ok(app.innerHTML.includes('收款测算'), '预测 still shows the computed 收款测算');
 
 // ---------- 7. RECEIVABLES: per-customer 出货 + 回款周 → forecast 收款 by channel ----------
 nav('ar');

@@ -50,7 +50,7 @@
         qtyForLarge: '', qtyForSmall: '', qtyForDye: '', qtyForCut: '',
         qtyDomLarge: '', qtyDomSmall: '', qtyDomDye: '', qtyDomCut: '',
         defectRate: '',
-        seedlingMonthly: '', seedlingPrice: '',
+        huaAmount: '', miaoAmount: '', bottleAmount: '',
         pkgCost: '', prodCost: '',
         payrollMonthly: '', utilitiesMonthly: '',
         freightMonthly: '', projectsMonthly: '', travelWeekly: '', loanMonthly: ''

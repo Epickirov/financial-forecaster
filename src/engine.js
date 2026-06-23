@@ -45,22 +45,22 @@
   var PTYPES = [{ id: '苗', label: '苗款' }, { id: '花', label: '开花株款' }];
 
   // ---- cash payment categories (drive 全年支出 / the expense donut) ------
-  var PAYCATS = ['seedling', 'flowering', 'freight', 'loan', 'payroll', 'utilrent', 'projects', 'materials', 'travel', 'custom'];
+  var PAYCATS = ['seedling', 'flowering', 'bottle', 'freight', 'loan', 'payroll', 'utilrent', 'projects', 'materials', 'travel', 'custom'];
 
   // receipt + payment line definitions shared by 历史/预测 panels
   var RECEIPT_DEFS = [['foreign', '国外收款'], ['domestic', '国内收款']];
   var PAY_ROW_DEFS = [
-    ['seedling', '苗款'], ['flowering', '开花株款'], ['freight', '物流运费'], ['payroll', '工资社保税费'],
+    ['seedling', '苗款'], ['flowering', '开花株款'], ['bottle', '瓶苗款'], ['freight', '物流运费'], ['payroll', '工资社保税费'],
     ['utilrent', '水电与租金'], ['projects', '项目及工程'], ['materials', '生产物资'],
     ['travel', '差旅招待加油伙食'], ['loan', '归还借款 / 固定支出'], ['custom', '其他自定义支出']
   ];
 
   var PAY_NAMES = {
-    seedling: '苗款', flowering: '开花株款', freight: '物流运费', payroll: '工资社保', utilrent: '水电租金',
+    seedling: '苗款', flowering: '开花株款', bottle: '瓶苗款', freight: '物流运费', payroll: '工资社保', utilrent: '水电租金',
     materials: '生产物资', projects: '工程项目', loan: '借款/固定', travel: '差旅其他', custom: '其他自定义'
   };
   var PAY_COLORS = {
-    seedling: '#c96442', flowering: '#b5862f', freight: '#8a6d4f', payroll: '#4e7c4f', utilrent: '#dd8a63',
+    seedling: '#c96442', flowering: '#b5862f', bottle: '#b9745a', freight: '#8a6d4f', payroll: '#4e7c4f', utilrent: '#dd8a63',
     materials: '#b07a52', projects: '#e0a079', loan: '#7c3a23', travel: '#f0cdb8', custom: '#a3886a'
   };
 
@@ -301,15 +301,16 @@
     var domestic = domSales;                                // FD only
 
     // 苗款 / 开花株款: scheduled payables due this week (from the register), else assumption baseline
-    var dueMiao = dueInWeek(state, wIdx, '苗'), dueHua = dueInWeek(state, wIdx, '花');
-    var seedling = dueMiao > 0 ? dueMiao : g('seedlingMonthly') / WPM * g('seedlingPrice');
-    var flowering = dueHua;                                 // 开花株款 = 花 payables due this 付款周; NOT from 假设
+    var dueMiao = dueInWeek(state, wIdx, '苗'), dueHua = dueInWeek(state, wIdx, '花'), dueBottle = dueInWeek(state, wIdx, '瓶苗');
+    var seedling = dueMiao > 0 ? dueMiao : g('miaoAmount') / WPM;          // 苗款: booked AP else 苗金额(元/月) FP
+    var flowering = dueHua > 0 ? dueHua : g('huaAmount') / WPM;            // 开花株款: booked AP else 开花株金额(元/月) FP
+    var bottle = dueBottle > 0 ? dueBottle : g('bottleAmount') / WPM;      // 瓶苗款: booked AP else 瓶苗款(元/月) FP
     var payroll = g('payrollMonthly') / WPM;
     var utilrent = g('utilitiesMonthly') / WPM + monthlyFrom(state.rents, m) / WPM;
     var projects = g('projectsMonthly') / WPM;
     var dueFreight = freightDueInWeek(state, wIdx);         // 运费 booked (AP) for this 付款周
     var freight = dueFreight > 0 ? dueFreight : g('freightMonthly') / WPM;  // AP where booked, else FP — never summed
-    var materials = volW * (g('pkgCost') + g('prodCost'));  // 生产物资 only; 运费 is its own category now
+    var materials = (g('pkgCost') + g('prodCost')) / WPM;   // 生产物料: 元/月, standalone (no longer × 销量)
     var travel = g('travelWeekly');
     var loan = g('loanMonthly') / WPM + monthlyFrom(state.fixed, m) / WPM;
 
@@ -321,7 +322,7 @@
     });
 
     return {
-      foreign: foreign, domestic: domestic, seedling: seedling, flowering: flowering, freight: freight,
+      foreign: foreign, domestic: domestic, seedling: seedling, flowering: flowering, bottle: bottle, freight: freight,
       payroll: payroll, utilrent: utilrent, projects: projects, materials: materials,
       travel: travel, loan: loan, custom: custom,
       // breakdown helpers (not part of the cash spine, used by 收款测算)

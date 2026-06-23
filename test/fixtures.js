@@ -44,8 +44,8 @@ function demoModel() {
       qtyForLarge: '24000', qtyForSmall: '8000', qtyForDye: '0', qtyForCut: '0',
       qtyDomLarge: '70000', qtyDomSmall: '12000', qtyDomDye: '5000', qtyDomCut: '14000',
       defectRate: '0.05',
-      seedlingMonthly: '80000', seedlingPrice: '10',
-      pkgCost: '1', prodCost: '0.8',
+      huaAmount: '200000', miaoAmount: '800000', bottleAmount: '100000',
+      pkgCost: '60000', prodCost: '50000',
       payrollMonthly: '350000', utilitiesMonthly: '110000',
       freightMonthly: '100000', projectsMonthly: '30000', travelWeekly: '5000', loanMonthly: '45000'
     },

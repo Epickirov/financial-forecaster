@@ -54,7 +54,7 @@
     var titles = {
       dash: ['财务总览', '历史 + 预测合并的全年财务全景'],
       hist: ['历史数据', '按周录入实际销售、进货与现金流'],
-      fcst: ['预测', '由假设自动生成 · 每周可覆盖'],
+      fcst: ['预测', '由假设自动生成 · 只读（在假设中调整）'],
       assume: ['假设', '逐周设定 · 默认继承上一周 · 驱动该周预测'],
       seedpay: ['苗/花应付款', '按付款周登记应付苗款 / 开花株款 · 分国内 / 国外 · 含逾期与紧急度汇总'],
       logi: ['物流成本', '各批次运费 · 按付款周计入「生产物资运费」现金流'],
@@ -192,8 +192,9 @@
       var sub = '';
       if (f === 'seedling') sub = '本周(第' + (curW + 1) + '周)应付苗款合计 ' + fmt(E.dueInWeek(S, curW, '苗'));
       else if (f === 'flowering') sub = '本周(第' + (curW + 1) + '周)应付开花株款合计 ' + fmt(E.dueInWeek(S, curW, '花'));
+      else if (f === 'bottle') sub = '本周(第' + (curW + 1) + '周)应付瓶苗款合计 ' + fmt(E.dueInWeek(S, curW, '瓶苗'));
       else if (f === 'freight') sub = '本周(第' + (curW + 1) + '周)应付运费合计 ' + fmt(E.freightDueInWeek(S, curW));
-      return { key: selIdx + ':' + f, label: label, sub: sub, val: (S.fcst[selIdx + ':' + f]) != null ? S.fcst[selIdx + ':' + f] : '', ph: '≈' + yuan0(E.computed(S, selIdx)[f] || 0) };
+      return { key: selIdx + ':' + f, label: label, sub: sub, amt: fmt(E.fcOf(S, selIdx, f)), val: (S.fcst[selIdx + ':' + f]) != null ? S.fcst[selIdx + ':' + f] : '', ph: '≈' + yuan0(E.computed(S, selIdx)[f] || 0) };
     }
     var fcstReceiptRows = recDefs.map(function (d) { return fcstRow(d[0], d[1]); });
     var fcstPayRows = payRowDefs.map(function (d) { return fcstRow(d[0], d[1]); });
@@ -294,11 +295,11 @@
       });
     }
     var assumeGroups = [
-      { gid: 'price', title: '销售单价', desc: '每株价格', sym: '¥', fields: [fld('priceForLarge', '国外大花 3.5/3.8寸', '元/株'), fld('priceForSmall', '国外小花 2.8/3.0寸', '元/株'), fld('priceForDye', '国外染色花', '元/株'), fld('priceForCut', '国外切花', '元/株'), fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3.0寸', '元/株'), fld('priceDomDye', '国内染色花', '元/株'), fld('priceDomCut', '国内切花', '元/株')], custom: grpCustom('price') },
-      { gid: 'collect', title: '回款节奏', desc: '当周销售收款比例 · 应收账款分类账期（周）', sym: '%', fields: [fld('collectInWeek', '当周回款率', '比例', '0.7 = 当周收回 70%'), fld('lagForeign', '国外应收账期', '周', '出货后约几周回款 · 默认 4'), fld('lagDomestic', '国内应收账期', '周', '默认 2'), fld('lagProvIn', '省内应收账期', '周', '默认 2'), fld('lagProvOut', '省外应收账期', '周', '默认 2')], custom: grpCustom('collect') },
+      { gid: 'price', title: '销售单价', desc: '每株价格 · 当周回款率（作用于销售收款）', sym: '¥', fields: [fld('priceForLarge', '国外大花 3.5/3.8寸', '元/株'), fld('priceForSmall', '国外小花 2.8/3.0寸', '元/株'), fld('priceForDye', '国外染色花', '元/株'), fld('priceForCut', '国外切花', '元/株'), fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3.0寸', '元/株'), fld('priceDomDye', '国内染色花', '元/株'), fld('priceDomCut', '国内切花', '元/株'), fld('collectInWeek', '当周回款率', '比例', '0.7 = 当周收回 70%；作用于上方价格×销量的收款')], custom: grpCustom('price') },
+      { gid: 'collect', title: '回款节奏', desc: '应收账款分类账期（周）', sym: '%', fields: [fld('lagForeign', '国外应收账期', '周', '出货后约几周回款 · 默认 4'), fld('lagDomestic', '国内应收账期', '周', '默认 2'), fld('lagProvIn', '省内应收账期', '周', '默认 2'), fld('lagProvOut', '省外应收账期', '周', '默认 2')], custom: grpCustom('collect') },
       { gid: 'volume', title: '销量与淘汰', desc: '各渠道周销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花 3.5/3.8寸', '株/周'), fld('qtyForSmall', '国外小花 2.8/3.0寸', '株/周'), fld('qtyForDye', '国外染色花', '株/周'), fld('qtyForCut', '国外切花', '株/周'), fld('qtyDomLarge', '国内大花 3.5/3.8寸', '株/周'), fld('qtyDomSmall', '国内小花 2.8/3.0寸', '株/周'), fld('qtyDomDye', '国内染色花', '株/周'), fld('qtyDomCut', '国内切花', '株/周'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
-      { gid: 'seed', title: '种苗采购', desc: '每月进苗与成本', sym: '❀', fields: [fld('seedlingMonthly', '月进苗株数', '株/月'), fld('seedlingPrice', '种苗平均单价', '元/株')], custom: grpCustom('seed') },
-      { gid: 'material', title: '生产物料成本', desc: '每株物料成本', sym: '▦', fields: [fld('pkgCost', '包装材料', '元/株'), fld('prodCost', '生产材料', '元/株')], custom: grpCustom('material') },
+      { gid: 'seed', title: '种苗应付', desc: '每月应付金额（开花株 / 苗 / 瓶苗）', sym: '❀', fields: [fld('huaAmount', '开花株金额', '元/月'), fld('miaoAmount', '苗金额', '元/月'), fld('bottleAmount', '瓶苗款', '元/月')], custom: grpCustom('seed') },
+      { gid: 'material', title: '生产物料成本', desc: '每月物料金额（独立 · 不随销量变动）', sym: '▦', fields: [fld('pkgCost', '包装材料', '元/月'), fld('prodCost', '生产材料', '元/月')], custom: grpCustom('material') },
       { gid: 'opex', title: '人工 · 水电 · 运费 · 其他', desc: '每月固定运营支出', sym: '⚙', fields: [fld('payrollMonthly', '工资社保税费', '元/月'), fld('utilitiesMonthly', '水电费', '元/月'), fld('freightMonthly', '运费', '元/月'), fld('projectsMonthly', '项目及工程', '元/月'), fld('travelWeekly', '差旅招待（每周）', '元/周'), fld('loanMonthly', '房贷/借款', '元/月')], custom: grpCustom('opex') }
     ];
 
@@ -617,12 +618,12 @@
 
   // ---------- FORECAST ----------
   function renderFcst(V) {
-    function ovRow(c) {
+    function ovRow(c) {  // read-only: 预测 is driven entirely by 假设 (1.5)
       return '<div style="margin-bottom:7px;">' +
         '<div style="display:flex; align-items:center; gap:10px;">' +
           '<span style="flex:1; font-size:13px;">' + esc(c.label) + '</span>' +
-          '<input class="fld" inputmode="numeric" ' + bMap('fcst', c.key) + ' value="' + escA(c.val) + '" placeholder="' + escA(c.ph) + '" style="width:150px; text-align:right; ' + FLD + '"></div>' +
-        (c.sub ? '<div style="font-size:10.5px; color:var(--gold); margin-top:2px;">' + esc(c.sub) + '</div>' : '') +
+          '<span class="num" style="font-size:14px; font-weight:600; color:var(--ink);">' + esc(c.amt) + '</span></div>' +
+        (c.sub ? '<div style="font-size:10.5px; color:var(--muted); margin-top:2px;">' + esc(c.sub) + '</div>' : '') +
         '</div>';
     }
     var up = V.upcoming.map(function (m) {
@@ -646,7 +647,7 @@
       card('<div style="font-size:13px; font-weight:700; color:var(--plum2); margin-bottom:10px;">选择预测周次 · 默认由假设自动生成，可逐项覆盖</div>' + chips(V.fcstWeeks), ' margin-bottom:16px;') +
       '<div style="display:grid; grid-template-columns:380px 1fr; gap:16px; align-items:start;">' +
         card('<div class="serif" style="font-size:17px; font-weight:700;">' + esc(V.selWeekLabel) + ' 预测</div>' +
-          '<div style="font-size:12px; color:var(--muted); margin:3px 0 14px;">留空＝采用该周假设值（灰色提示）· 填写＝手动覆盖</div>' +
+          '<div style="font-size:12px; color:var(--muted); margin:3px 0 14px;">预测值由「假设」自动生成、只读；如需调整请到「假设」页（可逐周覆盖）</div>' +
           '<div style="font-size:11px; color:var(--leaf); font-weight:700; margin:4px 0 8px;">收款</div>' + V.fcstReceiptRows.map(ovRow).join('') +
           '<div style="font-size:11px; color:var(--rose); font-weight:700; margin:14px 0 8px;">付款</div>' + V.fcstPayRows.map(ovRow).join('') +
           '<div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;"><span style="font-size:12px; color:var(--muted);">本周末预计余额</span><span class="num" style="font-size:18px; font-weight:700; color:var(--plum);">' + esc(V.selCloseWan) + '</span></div>') +
