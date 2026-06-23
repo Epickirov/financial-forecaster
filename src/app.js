@@ -807,7 +807,7 @@
     }).join('');
 
     return '<div>' +
-      (V.hasOverdue ? '<div style="background:#fbe7e2; border:1px solid #f0cfc6; border-radius:11px; padding:11px 14px; margin-bottom:14px; font-size:12.5px; color:#a23a28;">⚠ 逾期应付合计 <b>' + esc(V.overdueWan) + '</b> — 已计入现金轨迹「已订 (AR)」线本周应付；点对应条目「已付」可移出。</div>' : '') +
+      (V.hasOverdue ? '<div style="background:#fbe7e2; border:1px solid #f0cfc6; border-radius:11px; padding:11px 14px; margin-bottom:14px; font-size:12.5px; color:#a23a28;">⚠ 逾期应付合计 <b>' + esc(V.overdueWan) + '</b>（含逾期运费）· 未付款项仍计入现金轨迹；标记「已付」即结清移出。</div>' : '') +
       '<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px;">' + typeBlock('苗款', V.bucketsMiao, V.totMiao) + typeBlock('开花株款', V.bucketsHua, V.totHua) + typeBlock('瓶苗款', V.bucketsBottle, V.totBottle) + '</div>' +
       card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;"><div>' + h2('应付款登记') + '<div style="font-size:12px; color:var(--muted);">选择进货验货批次 → 应付金额（默认全额，可拆分/部分付）· 紧急度 · 付款周</div></div>' +
         '<button data-action="addRow" data-arr="payables" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer;">+ 新增应付款</button></div>' +
