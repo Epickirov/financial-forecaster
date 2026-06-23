@@ -49,6 +49,9 @@ Object.keys(pages).forEach(p => {
 // 3) 苗/花应付款 shows the bucket summary; 历史数据 has the per-supplier 进货验货
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'seedpay'));
 ok(app.innerHTML.includes('欠款(逾期)') && app.innerHTML.includes('应付款登记'), '苗/花应付款 breakdown buckets + register render');
+ok(app.innerHTML.includes('瓶苗款') && app.innerHTML.includes('总金额') && app.innerHTML.includes('未付'), '苗/花/瓶苗 boxes show 总金额/已付/未付');
+click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'logi'));
+ok(app.querySelector('[data-action="toggleFreightPaid"]') && app.innerHTML.includes('未付'), '物流成本 rows have 已付/未付 toggle + 总金额/已付/未付');
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'hist'));
 ok(app.innerHTML.includes('进货验货 · 按供应商') && app.querySelector('select[data-arr="shipments"][data-key="type"]'), '历史数据 进货验货 is a per-supplier shipment register');
 

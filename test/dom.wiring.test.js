@@ -212,4 +212,10 @@ click(app.querySelector('[data-action="toggleUnit"]'));
 ok(S().config.unit === '元', '单位切换 万→元');
 ok(app.innerHTML.includes('¥'), '元 mode renders ¥ formatted money');
 
+// ---------- 9. 物流 freight 已付/未付 toggle ----------
+nav('logi');
+const _fp0 = S().shipments[0].freightPaid;
+click(app.querySelector('[data-action="toggleFreightPaid"][data-idx="0"]'));
+ok(S().shipments[0].freightPaid !== _fp0, '物流 已付/未付 toggle flips shipments[0].freightPaid');
+
 console.log('\n' + pass + ' wiring assertions passed.\n');

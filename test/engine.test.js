@@ -153,9 +153,32 @@ test('committedCloses branches from the actual balance and projects on booked AR
   approx(cc[cw - 1], ser[cw - 1].close);           // branches from the last settled week's actual balance
   assert.ok(cc[cw] != null, 'committed line defined through the AR horizon (wk16)');
   assert.strictEqual(cc[cw + 1], null, 'committed line stops once bookings run out');
-  // wk16 step adds ONLY booked AR (515000), not forecast sales, and rolls in 逾期应付
+  // wk16 step adds ONLY booked AR (515000), not forecast sales, and rolls in 逾期应付 + 逾期运费
   var pays = E.PAYCATS.reduce(function (a, p) { return a + E.fcPayOf(s, cw, p); }, 0);
-  approx(cc[cw], cc[cw - 1] + 515000 - pays - E.overduePayables(s));
+  approx(cc[cw], cc[cw - 1] + 515000 - pays - E.overduePayables(s) - E.overdueFreight(s));
+});
+
+// ---- 瓶苗 type, 总金额/已付/未付 totals, 逾期运费 -----------------------------
+test('瓶苗 payable feeds the bottle cash line; 已付/未付 totals + 逾期运费 behave', function () {
+  var s = fresh();
+  // freight totals — demo freight all unpaid (sh1/sh2/sh3 @wk14, cw=16 → all overdue)
+  var ft = E.freightTotals(s);
+  approx(ft.total, 1046.6 + 687 + 1432.31, 1e-3); approx(ft.paid, 0); approx(ft.unpaid, ft.total, 1e-3);
+  approx(E.overdueFreight(s), 1046.6 + 687 + 1432.31, 1e-3);
+  s.shipments[0].freightPaid = true;                       // mark sh1 freight 已付
+  approx(E.freightTotals(s).paid, 1046.6, 1e-3);
+  approx(E.overdueFreight(s), 687 + 1432.31, 1e-3);        // sh1 leaves 逾期运费
+  approx(E.freightDueInWeek(s, 14), 687 + 1432.31, 1e-3);  // and leaves the week's due total
+  // payable totals (苗: pa1 + pa2, both unpaid)
+  var pt = E.payableTotals(s, '苗');
+  approx(pt.total, 310065 + 224958); approx(pt.paid, 0); approx(pt.unpaid, 310065 + 224958);
+  s.payables[0].paid = true;
+  approx(E.payableTotals(s, '苗').paid, 310065);
+  // 瓶苗 shipment → 瓶苗 payable → bottle cash line
+  s.shipments.push({ id: 'shx', type: '瓶苗', channel: '国内', supplier: 'x', spec: 'x', qty: '100', amount: '5000', iq: '', freight: '', freightWeek: '' });
+  s.payables.push({ id: 'pbx', shipmentId: 'shx', payWeek: '20', amount: '', urgency: '三级' });
+  approx(E.dueInWeek(s, 20, '瓶苗'), 5000);
+  approx(E.computed(s, 20).bottle, 5000);
 });
 
 // ---- 逾期应付: unpaid past-due rolls forward; 已付 transitions AP → Paid -----

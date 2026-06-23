@@ -42,7 +42,7 @@
 
   // ---- payables model: product type (苗/花) × supplier channel (国内/国外) -
   var CHANNELS = ['国内', '国外'];
-  var PTYPES = [{ id: '苗', label: '苗款' }, { id: '花', label: '开花株款' }];
+  var PTYPES = [{ id: '苗', label: '苗款' }, { id: '花', label: '开花株款' }, { id: '瓶苗', label: '瓶苗款' }];
 
   // ---- cash payment categories (drive 全年支出 / the expense donut) ------
   var PAYCATS = ['seedling', 'flowering', 'bottle', 'freight', 'loan', 'payroll', 'utilrent', 'projects', 'materials', 'travel', 'custom'];
@@ -172,12 +172,37 @@
       return (w != null && w < cw && !payablePaid(p)) ? s + payableAmt(state, p) : s;
     }, 0);
   }
-  // shipment freight (物流成本) charged to the cash flow in the week it is paid
+  function freightPaid(sh) { return !!(sh && (sh.freightPaid === true || sh.freightPaid === 'true')); }
+  // shipment freight (物流成本) charged to the cash flow in its 付款周 — UNPAID only
   function freightDueInWeek(state, wIdx) {
     return (state.shipments || []).reduce(function (s, sh) {
+      if (freightPaid(sh)) return s;
       var w = parseInt(sh.freightWeek, 10);
       return (!isNaN(w) && w === wIdx) ? s + num(sh.freight) : s;
     }, 0);
+  }
+  // 逾期运费: unpaid freight whose 付款周 is already behind the as-of week (rolled into the current week)
+  function overdueFreight(state) {
+    var cw = currentWeekIdx(state);
+    return (state.shipments || []).reduce(function (s, sh) {
+      if (freightPaid(sh)) return s;
+      var w = parseInt(sh.freightWeek, 10);
+      return (!isNaN(w) && w < cw) ? s + num(sh.freight) : s;
+    }, 0);
+  }
+  // 总金额 / 已付 / 未付 for one payable type (苗/花/瓶苗) and for freight
+  function payableTotals(state, type) {
+    var total = 0, paid = 0;
+    (state.payables || []).forEach(function (p) {
+      if (type && payableMeta(state, p).type !== type) return;
+      var amt = payableAmt(state, p); total += amt; if (payablePaid(p)) paid += amt;
+    });
+    return { total: total, paid: paid, unpaid: total - paid };
+  }
+  function freightTotals(state) {
+    var total = 0, paid = 0;
+    (state.shipments || []).forEach(function (sh) { var amt = num(sh.freight); total += amt; if (freightPaid(sh)) paid += amt; });
+    return { total: total, paid: paid, unpaid: total - paid };
   }
   // index of the last week sharing the month of weeks[fromIdx]
   function lastWeekOfMonth(state, fromIdx) {
@@ -413,7 +438,7 @@
     if (horizon < cw) return out;                          // no forward bookings → no committed line
     var branch = cw > 0 ? cw - 1 : 0;
     var bal = cw > 0 ? ser[cw - 1].close : num(state.config.openingBalance);
-    var overdue = overduePayables(state);                  // 逾期应付 — owed now, rolled into the current week
+    var overdue = overduePayables(state) + overdueFreight(state);   // 逾期应付 + 逾期运费 — owed now, rolled into the current week
     out[branch] = bal;
     for (var i = cw; i <= horizon && i < W.length; i++) {
       var ar = arDueInWeek(state, i);
@@ -462,7 +487,8 @@
     genWeeks: genWeeks, weeks: weeks, currentWeekIdx: currentWeekIdx,
     effA: effA, inheritedA: inheritedA, effAN: effAN, monthlyFrom: monthlyFrom,
     shipmentById: shipmentById, shipUnit: shipUnit, payableMeta: payableMeta, payableAmt: payableAmt,
-    payWeekOf: payWeekOf, payablePaid: payablePaid, dueInWeek: dueInWeek, overduePayables: overduePayables, freightDueInWeek: freightDueInWeek,
+    payWeekOf: payWeekOf, payablePaid: payablePaid, dueInWeek: dueInWeek, overduePayables: overduePayables, payableTotals: payableTotals,
+    freightDueInWeek: freightDueInWeek, freightPaid: freightPaid, overdueFreight: overdueFreight, freightTotals: freightTotals,
     lastWeekOfMonth: lastWeekOfMonth, payableBuckets: payableBuckets, salesReceipts: salesReceipts,
     customerOutstanding: customerOutstanding, arDueInWeek: arDueInWeek,
     customerById: customerById, weekIdxOf: weekIdxOf, arLag: arLag, arCollectWeek: arCollectWeek, AR_LAG_KEY: AR_LAG_KEY, AR_LAG_DEFAULT: AR_LAG_DEFAULT,
