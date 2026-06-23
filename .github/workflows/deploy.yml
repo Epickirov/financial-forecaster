@@ -1,0 +1,39 @@
+name: Deploy (Cloudflare Pages)
+
+# Auto-deploys to the kmty-financial-forecaster Pages project on every push to
+# main: runs the test suite, builds dist/ + functions, then publishes to
+# production. No more manual `wrangler pages deploy`.
+#
+# One-time setup: add a repository secret CLOUDFLARE_API_TOKEN
+#   (Settings → Secrets and variables → Actions → New repository secret)
+#   scoped to Account · Cloudflare Pages: Edit (+ D1 Edit if you wire the backend).
+# The account id below is not a secret (it appears in dashboard URLs).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: pages-deploy-main
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run test:all          # engine + DOM smoke + wiring — a red suite blocks the deploy
+      - run: npm run build             # regenerates dist/ from src/
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 957f0193c7de3a589a39ccb2a7ca0819
+          # wrangler.toml supplies pages_build_output_dir=dist + the D1 binding;
+          # functions/ at repo root are bundled automatically.
+          command: pages deploy --project-name kmty-financial-forecaster --branch main
