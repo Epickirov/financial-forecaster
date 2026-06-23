@@ -40,7 +40,7 @@ ok(/财务总览/.test(app.innerHTML), 'dashboard title renders');
 ok(/全年收款/.test(app.innerHTML) && /现金轨迹/.test(app.innerHTML), 'KPI row + chart render');
 
 // 2) every nav page renders without throwing
-const pages = { hist: '销售明细', fcst: '收款测算', assume: '销量与淘汰', seedpay: '应付款登记', logi: '各批次运费', ar: '客户应收账款', report: '财务预测报告' };
+const pages = { hist: '销售明细', fcst: '收款测算', assume: '销量与淘汰', seedpay: '应付款登记', logi: '各批次运费', ar: '本周应收余额', report: '财务预测报告' };
 Object.keys(pages).forEach(p => {
   click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === p));
   ok(app.innerHTML.includes(pages[p]), 'page "' + p + '" renders (' + pages[p] + ')');
@@ -72,11 +72,11 @@ obal.value = '9000000'; fire(obal, 'input');
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'dash'));
 ok(app.innerHTML.includes('900.00万'), 'opening balance edit reflows into 现可用款 KPI (900.00万)');
 
-// 6) AR redesign: per-customer shipments + 回款周 picker; forecast keeps the AR line
+// 6) AR ledger (per-week 国内/国外); forecast 收款测算 sums FD + 本周已收
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'ar'));
-ok(app.innerHTML.includes('回款周') && app.querySelector('[data-action="addArShip"]'), 'AR page: per-customer 出货 + 回款周 picker');
+ok(app.querySelector('input[data-map="ar"]') && app.innerHTML.includes('本周已收金额'), 'AR page is a per-week 国内/国外 ledger (预计应收 / 本周新增 / 本周已收)');
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'fcst'));
-ok(app.innerHTML.includes('已订 AR') && app.innerHTML.includes('预测收款 (FD)'), 'forecast 收款测算 shows FD and AR as parallel bands (never summed)');
+ok(app.innerHTML.includes('本周已收 (应收账款)') && app.innerHTML.includes('预测收款 (FD)'), 'forecast 收款测算 sums FD + 本周已收');
 
 // 7) selecting a week chip changes the active selection
 click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === 'fcst'));

@@ -169,34 +169,21 @@ nav('fcst');
 ok(app.querySelectorAll('input[data-map="fcst"]').length === 0, '预测 page has no editable override inputs — read-only');
 ok(app.innerHTML.includes('收款测算'), '预测 still shows the computed 收款测算');
 
-// ---------- 7. RECEIVABLES: per-customer 出货 + 回款周 → forecast 收款 by channel ----------
+// ---------- 7. RECEIVABLES: per-week ledger → 本周已收 flows to 收款; 预计应收 carries forward ----------
 nav('ar');
-const cIdx = 5;                                   // 切花批发商 (国内), no demo shipment
-const arCustId = S().customers[cIdx].id;
-const beforeDom = E.arDueInWeek(S(), W).domestic;
-click(app.querySelector('[data-action="addArShip"][data-cust="' + arCustId + '"]'));
-const asIdx = S().arShipments.length - 1;
-setV(byArr('arShipments', asIdx, 'value'), '500000');
-ok(approx(E.customerOutstanding(S(), arCustId), 500000, 1), '客户出货货值汇总为应收余额 (500000)');
-click(app.querySelector('[data-action="pickWeek"][data-arr="customers"][data-idx="' + cIdx + '"][data-week="' + W + '"]'));
-ok(S().customers[cIdx].collectWeek === W, '回款周 tile click sets collectWeek = ' + W);
-ok(approx(E.arDueInWeek(S(), W).domestic - beforeDom, 500000, 1), '客户应收在回款周计入 国内收款 (+500000)');
-const domBeforeCat = E.arDueInWeek(S(), W).domestic;
-setV(byArr('customers', cIdx, 'cat'), '国外', 'change');
-ok(approx(domBeforeCat - E.arDueInWeek(S(), W).domestic, 500000, 1), '客户分类→国外 时应收从 国内 转入 国外收款');
-
-// ---------- 7b. 假设 账期 field + per-shipment 回款周 override ----------
+click([...app.querySelectorAll('[data-action="selectWeek"]')].find(b => +b.dataset.idx === 25));   // a clean week
+const arWk = sel();
+const cinBefore = E.series(S())[arWk].cin;
+setMap('ar', new RegExp('^' + arWk + ':dom:rcv$'), '70000');
+ok(S().ar[arWk + ':dom:rcv'] === '70000', '本周已收(国内) persists to state.ar');
+ok(approx(E.series(S())[arWk].cin - cinBefore, 70000, 1), '本周已收 adds to the week 收款 (cin +70000)');
+setMap('ar', new RegExp('^' + arWk + ':for:exp$'), '900000');
+ok(approx(E.arExp(S(), arWk + 3, 'for'), 900000, 1), '预计应收(国外) carries forward to later weeks');
+ok(approx(E.cashPlusARCloses(S())[arWk] - E.forecastCloses(S())[arWk], E.arExpectedTotal(S(), arWk), 1), '现金+应收 line = 现金 + 当周预计应收');
+// 假设·回款节奏 shows the same 预计应收 (read-only)
 nav('assume');
-const lagEl = [...app.querySelectorAll('input[data-map="assumeWeek"]')].find(i => /:lagForeign$/.test(i.dataset.key));
-ok(lagEl, '假设·回款节奏 exposes 国外应收账期 (lagForeign) field');
-setV(lagEl, '6');
-ok(S().assumeWeek[sel() + ':lagForeign'] === '6', '账期 edit persists to assumeWeek (week-scoped, carry-forward)');
-nav('ar');
-const ovIdx = S().arShipments.length - 1;             // the c6 shipment added in section 7 (no 出货日期)
-const ovWeek = E.currentWeekIdx(S()) + 1;
-click(app.querySelector('[data-action="pickWeek"][data-arr="arShipments"][data-idx="' + ovIdx + '"][data-week="' + ovWeek + '"]'));
-ok(S().arShipments[ovIdx].collectWeek === ovWeek, 'per-shipment 回款周 override sets arShipments.collectWeek = ' + ovWeek);
-ok(E.arCollectWeek(S(), S().arShipments[ovIdx]) === ovWeek, 'arCollectWeek honors the per-shipment override over the customer fallback');
+click([...app.querySelectorAll('[data-action="selectWeek"]')].find(b => +b.dataset.idx === arWk));
+ok(app.innerHTML.includes('国外应收') && [...app.querySelectorAll('input[data-map="assumeWeek"]')].every(i => !/:lag/.test(i.dataset.key)), '假设·回款节奏 shows 应收 read-only (no 账期 inputs)');
 
 // ---------- 8. CONFIG: dates regenerate weeks; as-of splits; unit toggles ----------
 const obal = window.document.getElementById('c|openingBalance');

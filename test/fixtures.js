@@ -64,14 +64,6 @@ function demoModel() {
       { name: '出口货物险', amount: '41109', months: '9' },
       { name: '软件/专利年费', amount: '11300', months: '3,7,11' }
     ],
-    customers: [
-      { id: 'c1', name: '斗南门市批发', cat: '省内', note: '每周结算', collectWeek: '' + (wTarget + 2) },
-      { id: 'c2', name: '小街基地走量客户', cat: '省内', note: '', collectWeek: '' },
-      { id: 'c3', name: '俄罗斯出口客户', cat: '国外', note: '已到账未结汇', collectWeek: '' + (wTarget + 2) },
-      { id: 'c4', name: '广东全美（转售）', cat: '省外', note: '', collectWeek: '' },
-      { id: 'c5', name: '染色花经销商', cat: '省内', note: '', collectWeek: '' },
-      { id: 'c6', name: '切花批发商', cat: '国内', note: '', collectWeek: '' }
-    ],
     assumeWeek: {}, customItems: [],
     // 进货验货 — per-supplier shipments (单价 = 金额/数量 auto)
     shipments: [
@@ -85,11 +77,12 @@ function demoModel() {
       { id: 'pa2', shipmentId: 'sh2', payWeek: Wn, amount: '', urgency: '二级' },
       { id: 'pa3', shipmentId: 'sh3', payWeek: W, amount: '', urgency: '四级' }
     ],
-    arShipments: [
-      { id: 'ar1', custId: 'c1', value: '186000', date: '2026-05-20' },
-      { id: 'ar2', custId: 'c3', value: '515000', date: '2026-05-18' },
-      { id: 'ar3', custId: 'c2', value: '240000', date: '2026-05-25' }
-    ],
+    // 应收账款 ledger (per-week by channel): exp 预计应收(carry-forward) / add 本周新增 / rcv 本周已收
+    ar: {
+      '15:dom:exp': '200000', '15:for:exp': '500000',   // 应收余额 from wk15 (carries forward)
+      '16:dom:rcv': '60000', '16:for:rcv': '120000',     // 本周已收 at wk16 → 收款
+      '16:dom:add': '50000'                               // 本周新增 国内 at wk16
+    },
     sales: sales, fcst: {}, actual: actualSeed
   };
 }

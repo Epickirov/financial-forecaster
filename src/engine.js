@@ -66,8 +66,7 @@
 
   var URGENCY_OPTIONS = ['一级', '二级', '三级', '四级'];
   var URGENCY_COLORS = { '一级': '#e8b84b', '二级': '#b9a7b3', '三级': '#5fb88a', '四级': '#6b9bd1' };
-  var AR_CATS = ['国外', '国内', '省内', '省外'];
-  var AR_CAT_COLORS = { '国外': '#b5862f', '国内': '#c96442', '省内': '#4e7c4f', '省外': '#dd8a63' };
+  var AR_CH = [{ id: 'dom', name: '国内应收' }, { id: 'for', name: '国外应收' }];   // 应收账款 channels
 
   function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
@@ -247,59 +246,24 @@
     return { foreign: foreign, domestic: domestic };
   }
 
-  // 应收账款: each AR shipment (已出货货值) collects on its OWN timeline.
-  // Collection week resolves, in order:
-  //   (1) explicit per-shipment override (collectWeek), else
-  //   (2) 出货周 + the customer-category 账期 (editable in 假设·回款节奏; else a
-  //       sensible default), else
-  //   (3) the per-customer 回款周 as a fallback (date-less legacy rows).
-  // 国外 customers feed 国外收款; everyone else feeds 国内收款.
-  var AR_LAG_KEY = { '国外': 'lagForeign', '国内': 'lagDomestic', '省内': 'lagProvIn', '省外': 'lagProvOut' };
-  var AR_LAG_DEFAULT = { '国外': 4, '国内': 2, '省内': 2, '省外': 2 };
-
-  function customerById(state, id) {
-    var L = state.customers || [];
-    for (var i = 0; i < L.length; i++) if (L[i].id === id) return L[i];
-    return null;
+  // 应收账款 — a per-week ledger by channel (dom=国内, for=国外). Each week holds:
+  //   exp 预计应收金额 — outstanding balance, CARRIES FORWARD (default = last week's value)
+  //   add 本周新增应收金额 — new receivables this week (per-week, blank default)
+  //   rcv 本周已收金额    — collected this week (per-week) → adds to that channel's 收款
+  // (Replaces the old per-customer / per-shipment + 账期 model entirely.)
+  function arVal(state, wIdx, ch, field) { var m = state.ar || {}; return m[wIdx + ':' + ch + ':' + field]; }
+  function arExp(state, wIdx, ch) {                       // 预计应收: latest non-blank value at week <= wIdx
+    for (var w = wIdx; w >= 0; w--) { var v = arVal(state, w, ch, 'exp'); if (v !== undefined && v !== '') return num(v); }
+    return 0;
   }
-  function customerOutstanding(state, custId) {
-    return (state.arShipments || []).reduce(function (s, sh) { return sh.custId === custId ? s + num(sh.value) : s; }, 0);
+  function arInheritedExp(state, wIdx, ch) {              // carry-forward value from strictly before wIdx (placeholder)
+    for (var w = wIdx - 1; w >= 0; w--) { var v = arVal(state, w, ch, 'exp'); if (v !== undefined && v !== '') return num(v); }
+    return 0;
   }
-  // index of the week containing an ISO date (week 0 if earlier; null if past the horizon)
-  function weekIdxOf(state, iso) {
-    if (!iso) return null;
-    var W = weeks(state);
-    for (var i = 0; i < W.length; i++) { if (iso >= W[i].startISO && iso <= W[i].endISO) return i; }
-    return (W.length && iso < W[0].startISO) ? 0 : null;
-  }
-  // collection 账期 (weeks) for a category, effective at week `atWeek`
-  function arLag(state, cat, atWeek) {
-    var v = effA(state, atWeek == null ? 0 : atWeek, AR_LAG_KEY[cat] || 'lagDomestic');
-    if (v !== undefined && v !== '' && !isNaN(parseFloat(v))) return parseInt(v, 10);
-    return AR_LAG_DEFAULT[cat] != null ? AR_LAG_DEFAULT[cat] : 2;
-  }
-  // resolved collection week for ONE AR shipment (null = unscheduled)
-  function arCollectWeek(state, sh) {
-    if (sh.collectWeek !== undefined && sh.collectWeek !== '' && sh.collectWeek !== null) {
-      var ov = parseInt(sh.collectWeek, 10); if (!isNaN(ov)) return ov;
-    }
-    var cust = customerById(state, sh.custId), cat = (cust && cust.cat) || '国内';
-    var sw = weekIdxOf(state, sh.date);
-    if (sw != null) return sw + arLag(state, cat, sw);
-    if (cust && cust.collectWeek !== '' && cust.collectWeek != null) {
-      var cw = parseInt(cust.collectWeek, 10); if (!isNaN(cw)) return cw;
-    }
-    return null;
-  }
-  function arDueInWeek(state, wIdx) {
-    var foreign = 0, domestic = 0;
-    (state.arShipments || []).forEach(function (sh) {
-      if (arCollectWeek(state, sh) !== wIdx) return;
-      var cust = customerById(state, sh.custId), cat = (cust && cust.cat) || '国内';
-      if (cat === '国外') foreign += num(sh.value); else domestic += num(sh.value);
-    });
-    return { foreign: foreign, domestic: domestic };
-  }
+  function arRcv(state, wIdx, ch) { return num(arVal(state, wIdx, ch, 'rcv')); }   // 本周已收 → 收款
+  function arAdd(state, wIdx, ch) { return num(arVal(state, wIdx, ch, 'add')); }   // 本周新增
+  function arExpectedTotal(state, wIdx) { return arExp(state, wIdx, 'dom') + arExp(state, wIdx, 'for'); }
+  function arReceivedTotal(state, wIdx) { return arRcv(state, wIdx, 'dom') + arRcv(state, wIdx, 'for'); }
 
   // ---------- the assumption-driven forecast for ONE week ------------------
   function computed(state, wIdx) {
@@ -313,16 +277,14 @@
     var totalQ = qFL + qFS + qFDye + qFCut + qDL + qDS + qDDye + qDCut;
     var volW = totalQ;                                      // 销量 entered as 株/周 (weekly)
 
-    // 收款 = (大花+小花+染色花+切花) per channel × weekly qty × 当周回款率; AR adds on top.
+    // 收款(FD) = (大花+小花+染色花+切花) per channel × weekly qty × 当周回款率.
+    // 应收账款 collection (本周已收) is added separately in the cash series — never here.
     var foreignGross = qFL * g('priceForLarge') + qFS * g('priceForSmall') + qFDye * g('priceForDye') + qFCut * g('priceForCut');
     var domGross = qDL * g('priceDomLarge') + qDS * g('priceDomSmall') + qDDye * g('priceDomDye') + qDCut * g('priceDomCut');
     var collectWeek = g('collectInWeek');                  // 当周回款率
-
-    var arDue = arDueInWeek(state, wIdx);                   // 应收账款 booked for this week (国外/国内) — a PARALLEL band
     var foreignSales = foreignGross * collectWeek;
     var domSales = domGross * collectWeek;
-    var foreign = foreignSales;                             // FD only — AR is NEVER summed in (separate committed band)
-    var arCollect = arDue.domestic;                         // AR band (国内), kept as a breakdown helper
+    var foreign = foreignSales;                             // FD only (new-sales collection)
     var domestic = domSales;                                // FD only
 
     // 苗款 / 开花株款: scheduled payables due this week (from the register), else assumption baseline
@@ -354,7 +316,7 @@
       payroll: payroll, utilrent: utilrent, projects: projects, materials: materials,
       travel: travel, loan: loan, custom: custom,
       // breakdown helpers (not part of the cash spine, used by 收款测算)
-      _domSales: domSales, _foreignSales: foreignSales, _arCollect: arCollect, _arForeign: arDue.foreign, _domGross: domGross, _foreignGross: foreignGross, _collectWeek: collectWeek, _keep: keep
+      _domSales: domSales, _foreignSales: foreignSales, _domGross: domGross, _foreignGross: foreignGross, _collectWeek: collectWeek, _keep: keep
     };
   }
 
@@ -401,7 +363,8 @@
     var bal = num(cfg.openingBalance);
     return W.map(function (w, i) {
       var open = bal;
-      var cin = eff(state, i, 'foreign') + eff(state, i, 'domestic');
+      // 收款 = FD/actual new-sales collection + 本周已收 (应收账款 collected this week)
+      var cin = eff(state, i, 'foreign') + eff(state, i, 'domestic') + arReceivedTotal(state, i);
       var pays = PAYCATS.reduce(function (s, c) { return s + payOf(state, i, c); }, 0);
       var close = open + cin - pays;
       bal = close;
@@ -409,13 +372,13 @@
     });
   }
 
-  // pure-forecast closing balances (the dotted line / variance baseline,
-  // runs across the WHOLE year ignoring actuals)
+  // pure-forecast closing balances — the 现金 dotted line (ignores actuals,
+  // runs the WHOLE year). 收款 = FD new-sales collection + 本周已收 (应收账款).
   function forecastCloses(state) {
     var W = weeks(state), bal = num(state.config.openingBalance), out = [];
     for (var i = 0; i < W.length; i++) {
       var open = bal;
-      var cin = fcOf(state, i, 'foreign') + fcOf(state, i, 'domestic');
+      var cin = fcOf(state, i, 'foreign') + fcOf(state, i, 'domestic') + arReceivedTotal(state, i);
       var pays = PAYCATS.reduce(function (s, c) { return s + fcPayOf(state, i, c); }, 0);
       var close = open + cin - pays;
       bal = close; out.push(close);
@@ -423,31 +386,12 @@
     return out;
   }
 
-  // committed (booked) balance trajectory — the SECOND dotted line. It follows
-  // the actual balance up to the as-of week, then projects FORWARD using ONLY
-  // booked 应收账款 collection (no forecast sales) minus the same scheduled
-  // outflow basis as the forecast line. Entries are null before the branch and
-  // after the last week any AR collects (the line simply stops — bookings only
-  // reach a few weeks out). The vertical gap to forecastCloses = reliance on
-  // not-yet-booked sales.
-  function committedCloses(state) {
-    var W = weeks(state), cw = currentWeekIdx(state), ser = series(state);
-    var out = W.map(function () { return null; });
-    var horizon = -1;
-    (state.arShipments || []).forEach(function (sh) { var w = arCollectWeek(state, sh); if (w != null && w >= cw && w > horizon) horizon = w; });
-    if (horizon < cw) return out;                          // no forward bookings → no committed line
-    var branch = cw > 0 ? cw - 1 : 0;
-    var bal = cw > 0 ? ser[cw - 1].close : num(state.config.openingBalance);
-    var overdue = overduePayables(state) + overdueFreight(state);   // 逾期应付 + 逾期运费 — owed now, rolled into the current week
-    out[branch] = bal;
-    for (var i = cw; i <= horizon && i < W.length; i++) {
-      var ar = arDueInWeek(state, i);
-      var pays = PAYCATS.reduce(function (s, c) { return s + fcPayOf(state, i, c); }, 0);
-      if (i === cw) pays += overdue;
-      bal = bal + (ar.foreign + ar.domestic) - pays;
-      out[i] = bal;
-    }
-    return out;
+  // 现金 + 应收 — the SECOND dotted line: the 现金 trajectory plus the outstanding
+  // 预计应收 (国内+国外) at each week. The vertical gap to forecastCloses = how much
+  // is still owed to you (uncollected receivables).
+  function cashPlusARCloses(state) {
+    var fc = forecastCloses(state);
+    return fc.map(function (c, i) { return c + arExpectedTotal(state, i); });
   }
 
   // ---------- formatting ---------------------------------------------------
@@ -482,7 +426,7 @@
     RECEIPT_DEFS: RECEIPT_DEFS, PAY_ROW_DEFS: PAY_ROW_DEFS,
     PAY_NAMES: PAY_NAMES, PAY_COLORS: PAY_COLORS,
     URGENCY_OPTIONS: URGENCY_OPTIONS, URGENCY_COLORS: URGENCY_COLORS,
-    AR_CATS: AR_CATS, AR_CAT_COLORS: AR_CAT_COLORS,
+    AR_CH: AR_CH,
     num: num,
     genWeeks: genWeeks, weeks: weeks, currentWeekIdx: currentWeekIdx,
     effA: effA, inheritedA: inheritedA, effAN: effAN, monthlyFrom: monthlyFrom,
@@ -490,10 +434,9 @@
     payWeekOf: payWeekOf, payablePaid: payablePaid, dueInWeek: dueInWeek, overduePayables: overduePayables, payableTotals: payableTotals,
     freightDueInWeek: freightDueInWeek, freightPaid: freightPaid, overdueFreight: overdueFreight, freightTotals: freightTotals,
     lastWeekOfMonth: lastWeekOfMonth, payableBuckets: payableBuckets, salesReceipts: salesReceipts,
-    customerOutstanding: customerOutstanding, arDueInWeek: arDueInWeek,
-    customerById: customerById, weekIdxOf: weekIdxOf, arLag: arLag, arCollectWeek: arCollectWeek, AR_LAG_KEY: AR_LAG_KEY, AR_LAG_DEFAULT: AR_LAG_DEFAULT,
+    arVal: arVal, arExp: arExp, arInheritedExp: arInheritedExp, arRcv: arRcv, arAdd: arAdd, arExpectedTotal: arExpectedTotal, arReceivedTotal: arReceivedTotal,
     computed: computed, isHist: isHist, fcOf: fcOf, acOf: acOf, eff: eff, payOf: payOf, fcPayOf: fcPayOf,
-    series: series, forecastCloses: forecastCloses, committedCloses: committedCloses,
+    series: series, forecastCloses: forecastCloses, cashPlusARCloses: cashPlusARCloses,
     fmt: fmt, wan: wan, yuan0: yuan0, donut: donut
   };
 

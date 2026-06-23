@@ -67,7 +67,7 @@
     // ---- series + chart geometry ----
     var ser = E.series(S);
     var fcCloses = E.forecastCloses(S);
-    var cmCloses = E.committedCloses(S);
+    var cmCloses = E.cashPlusARCloses(S);   // 现金 + 应收 (second dotted line)
     var cmVals = cmCloses.filter(function (v) { return v != null; });
     var acCloses = ser.map(function (s) { return s.close; });
     var minV = Math.min.apply(null, fcCloses.concat(acCloses, cmVals, [open0]));
@@ -140,7 +140,7 @@
     var yearEnd = ser.length ? ser[ser.length - 1].close : 0;
     var minClose = Math.min.apply(null, acCloses);
     var minWeek = ser.find(function (s) { return s.close === minClose; });
-    var arTotal = S.customers.reduce(function (s, c) { return s + E.customerOutstanding(S, c.id); }, 0);
+    var arTotal = E.arExpectedTotal(S, E.currentWeekIdx(S));   // outstanding 应收 (国内+国外) at the current week
 
     // ---- selected week ----
     var selIdx = Math.min(Math.max(S.weekIdx | 0, 0), Math.max(ser.length - 1, 0));
@@ -151,7 +151,7 @@
     var curW = E.currentWeekIdx(S);
     var _aop = (S.config.asOfISO || '').split('-');
     var asOfMD = _aop.length === 3 ? (+_aop[1]) + '月' + (+_aop[2]) + '日' : '';
-    var arWeekCollect = (function () { var d = E.arDueInWeek(S, curW); return d.foreign + d.domestic; })();
+    var arWeekCollect = E.arReceivedTotal(S, curW);   // 本周已收 (国内+国外) this week
 
     var dashKpis = [
       { label: '现可用款 / 期初', val: fmt(open0), color: 'var(--plum)', sub: '农历财年起始余额', subColor: 'var(--muted)' },
@@ -232,10 +232,12 @@
       foreignGross: yuan0(c0._foreignGross), domGross: yuan0(c0._domGross),
       foreignSales: fmt(c0._foreignSales),  // 国外销售收款 (× 当周回款率)
       domSales: fmt(c0._domSales),          // 国内销售收款 (× 当周回款率)
-      arCollect: fmt(c0._arCollect),        // 应收账款本周回款 (国内)
-      arForeign: fmt(c0._arForeign),        // 应收账款本周回款 (国外)
+      arCollect: fmt(E.arRcv(S, selIdx, 'dom')),   // 本周已收 (国内)
+      arForeign: fmt(E.arRcv(S, selIdx, 'for')),   // 本周已收 (国外)
       foreignTotal: fmt(E.fcOf(S, selIdx, 'foreign')),
-      domesticTotal: fmt(E.fcOf(S, selIdx, 'domestic'))
+      domesticTotal: fmt(E.fcOf(S, selIdx, 'domestic')),
+      foreignSum: fmt(E.fcOf(S, selIdx, 'foreign') + E.arRcv(S, selIdx, 'for')),   // FD + 本周已收
+      domesticSum: fmt(E.fcOf(S, selIdx, 'domestic') + E.arRcv(S, selIdx, 'dom'))
     };
     var revBreakForeign = [merge({ label: '国外大花 3.5/3.8寸' }, revBreak.forLarge), merge({ label: '国外小花 2.8/3.0寸' }, revBreak.forSmall), merge({ label: '国外染色花' }, revBreak.forDye), merge({ label: '国外切花' }, revBreak.forCut)];
     var revBreakDom = [merge({ label: '国内大花 3.5/3.8寸' }, revBreak.domLarge), merge({ label: '国内小花 2.8/3.0寸' }, revBreak.domSmall), merge({ label: '国内染色花' }, revBreak.domDye), merge({ label: '国内切花' }, revBreak.domCut)];
@@ -300,29 +302,22 @@
     }
     var assumeGroups = [
       { gid: 'price', title: '销售单价', desc: '每株价格 · 当周回款率（作用于销售收款）', sym: '¥', fields: [fld('priceForLarge', '国外大花 3.5/3.8寸', '元/株'), fld('priceForSmall', '国外小花 2.8/3.0寸', '元/株'), fld('priceForDye', '国外染色花', '元/株'), fld('priceForCut', '国外切花', '元/株'), fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3.0寸', '元/株'), fld('priceDomDye', '国内染色花', '元/株'), fld('priceDomCut', '国内切花', '元/株'), fld('collectInWeek', '当周回款率', '比例', '0.7 = 当周收回 70%；作用于上方价格×销量的收款')], custom: grpCustom('price') },
-      { gid: 'collect', title: '回款节奏', desc: '应收账款分类账期（周）', sym: '%', fields: [fld('lagForeign', '国外应收账期', '周', '出货后约几周回款 · 默认 4'), fld('lagDomestic', '国内应收账期', '周', '默认 2'), fld('lagProvIn', '省内应收账期', '周', '默认 2'), fld('lagProvOut', '省外应收账期', '周', '默认 2')], custom: grpCustom('collect') },
+      { gid: 'collect', title: '回款节奏 · 应收概览', desc: '应收账款余额（来自「应收账款」页 · 只读）', sym: '%', fields: [], display: '<div style="display:flex; gap:10px; flex-wrap:wrap; font-size:12px;"><div style="flex:1; min-width:90px; background:#faf6ee; border-radius:7px; padding:8px 10px;">国内应收<div class="num" style="font-size:15px; font-weight:700; color:var(--plum2);">' + fmt(E.arExp(S, selIdx, 'dom')) + '</div></div><div style="flex:1; min-width:90px; background:#faf6ee; border-radius:7px; padding:8px 10px;">国外应收<div class="num" style="font-size:15px; font-weight:700; color:var(--plum2);">' + fmt(E.arExp(S, selIdx, 'for')) + '</div></div></div><div style="font-size:10.5px; color:var(--muted); margin-top:8px;">在「应收账款」页逐周录入；此处只读显示当周余额。</div>', custom: grpCustom('collect') },
       { gid: 'volume', title: '销量与淘汰', desc: '各渠道周销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花 3.5/3.8寸', '株'), fld('qtyForSmall', '国外小花 2.8/3.0寸', '株'), fld('qtyForDye', '国外染色花', '株'), fld('qtyForCut', '国外切花', '株'), fld('qtyDomLarge', '国内大花 3.5/3.8寸', '株'), fld('qtyDomSmall', '国内小花 2.8/3.0寸', '株'), fld('qtyDomDye', '国内染色花', '株'), fld('qtyDomCut', '国内切花', '株'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
       { gid: 'seed', title: '种苗应付', desc: '每周应付金额（开花株 / 苗 / 瓶苗）', sym: '❀', fields: [fld('huaAmount', '开花株金额', '元'), fld('miaoAmount', '苗金额', '元'), fld('bottleAmount', '瓶苗款', '元')], custom: grpCustom('seed') },
       { gid: 'material', title: '生产物料成本', desc: '每周物料金额（独立 · 不随销量变动）', sym: '▦', fields: [fld('pkgCost', '包装材料', '元'), fld('prodCost', '生产材料', '元')], custom: grpCustom('material') },
       { gid: 'opex', title: '人工 · 水电 · 运费 · 其他', desc: '每周运营支出', sym: '⚙', fields: [fld('payrollMonthly', '工资社保税费', '元'), fld('utilitiesMonthly', '水电费', '元'), fld('freightMonthly', '运费', '元'), fld('projectsMonthly', '项目及工程', '元'), fld('travelWeekly', '差旅招待', '元'), fld('loanMonthly', '房贷/借款', '元')], custom: grpCustom('opex') }
     ];
 
-    // ---- receivables (per customer: shipments → outstanding; collection week) ----
-    var allArShip = S.arShipments || [];
-    var custRows = S.customers.map(function (c, i) {
-      var ships = [];
-      allArShip.forEach(function (sh, si) { if (sh.custId === c.id) ships.push({ si: si, value: sh.value != null ? sh.value : '', date: sh.date != null ? sh.date : '', collectWeek: (sh.collectWeek === '' || sh.collectWeek == null) ? '' : parseInt(sh.collectWeek, 10), computedWeek: E.arCollectWeek(S, sh) }); });
-      var out = E.customerOutstanding(S, c.id);
-      return { idx: i, id: c.id, name: c.name, note: c.note, cat: c.cat || '国内', catColor: E.AR_CAT_COLORS[c.cat] || '#c96442',
-        collectWeek: (c.collectWeek === '' || c.collectWeek == null) ? '' : parseInt(c.collectWeek, 10),
-        outstanding: out, outstandingStr: yuan0(out), ships: ships, barW: 0 };
+    // ---- 应收账款 ledger (per-week, by channel 国内/国外) ----
+    var arRows = E.AR_CH.map(function (ch) {
+      var m = S.ar || {}, ek = selIdx + ':' + ch.id + ':exp', ak = selIdx + ':' + ch.id + ':add', rk = selIdx + ':' + ch.id + ':rcv';
+      return { id: ch.id, name: ch.name, expKey: ek, addKey: ak, rcvKey: rk,
+        exp: m[ek] != null ? m[ek] : '', add: m[ak] != null ? m[ak] : '', rcv: m[rk] != null ? m[rk] : '',
+        expPh: '继承 ' + yuan0(E.arInheritedExp(S, selIdx, ch.id)) };
     });
-    var arMax = Math.max.apply(null, custRows.map(function (c) { return c.outstanding; }).concat([1]));
-    custRows.forEach(function (c) { c.barW = (c.outstanding / arMax * 100).toFixed(0) + '%'; });
-    var arOut = custRows.reduce(function (s, c) { return s + c.outstanding; }, 0);
-    var catSummary = E.AR_CATS.map(function (cat) {
-      return { cat: cat, color: E.AR_CAT_COLORS[cat], val: fmt(S.customers.reduce(function (s, c) { return s + ((c.cat || '国内') === cat ? E.customerOutstanding(S, c.id) : 0); }, 0)) };
-    });
+    var arOut = E.arExpectedTotal(S, selIdx);            // outstanding 应收 at the selected week
+    var arRcvSel = E.arReceivedTotal(S, selIdx);         // 本周已收 (国内+国外) at the selected week
 
     // ---- report ----
     var histPay = ser.reduce(function (a, s) { return s.isHist ? a + s.pays : a; }, 0);   // Paid (settled outflow)
@@ -333,7 +328,7 @@
       '本农历财年（' + fy + '）期初可用资金 ' + fmt(open0) + '，预计年末余额 ' + fmt(yearEnd) + '，较期初' + (yearEnd >= open0 ? '增长' : '下降') + ' ' + fmt(Math.abs(yearEnd - open0)) + '。',
       '全年预计收款 ' + fmt(totalCin) + '（实际 ' + fmt(histCin) + ' + 预测 ' + fmt(fcstCin) + '），合计支出 ' + fmt(totalPay) + '，全年净现金流 ' + (profit >= 0 ? '盈余' : '缺口') + ' ' + fmt(Math.abs(profit)) + '。',
       '现金最紧张出现在 ' + (minWeek ? minWeek.w.month + '月' : '—') + '，余额降至 ' + fmt(minClose) + (minClose < 1000000 ? '，需重点关注流动性' : '，整体安全') + '。',
-      '应收账款合计 ' + fmt(arOut) + '，来自 ' + S.customers.length + ' 位客户，是后续回款的主要来源。'
+      '应收账款（未收）余额合计 ' + fmt(arTotal) + '，随各周「本周已收」逐步收回。'
     ];
     var repKpis = [
       { label: '期初可用资金', val: fmt(open0), color: 'var(--plum)' },
@@ -360,7 +355,7 @@
       dashKpis: dashKpis, varAggStr: varAggStr, varAggColor: varAggColor,
       yTicks: yTicks, xTicks: xTicks, trajArea: trajArea, trajForecast: forecastPts, trajActual: actualPts, trajCommitted: committedPts, asOfX: asOfX, asOfWeekNo: curW + 1, asOfDate: asOfMD,
       monthBars: monthBars, dashDonut: dashDonut, totalPayWan: wan(totalPay) + '万',
-      arTotalWan: fmt(arTotal), arCount: S.customers.length, arWeekCollectWan: fmt(arWeekCollect),
+      arTotalWan: fmt(arTotal), arWeekCollectWan: fmt(arWeekCollect),
       selWeekLabel: selWk.label, selCloseWan: fmt(selRow.close),
       selNet: (selRow.net >= 0 ? '+' : '−') + fmt(Math.abs(selRow.net)), selNetColor: selRow.net >= 0 ? 'var(--leaf)' : 'var(--rose)',
       selFcNetWan: (selFcNet >= 0 ? '+' : '−') + fmt(Math.abs(selFcNet)),
@@ -373,7 +368,7 @@
       bucketsMiao: bucketsMiao, bucketsHua: bucketsHua, bucketsBottle: bucketsBottle, totMiao: totMiao, totHua: totHua, totBottle: totBottle, freightTot: freightTot,
       freightTotal: fmt(freightTotal), overdueWan: fmt(overdueTotal), hasOverdue: overdueTotal > 0, weeksList: weeksList, curW: curW, urgencyOptions: E.URGENCY_OPTIONS,
       upcoming: upcoming, assumeGroups: assumeGroups, rents: S.rents, fixed: S.fixed,
-      custRows: custRows, arOutWan: fmt(arOut), catSummary: catSummary, catOptions: E.AR_CATS,
+      arRows: arRows, arOutWan: fmt(arOut), arRcvSelWan: fmt(arRcvSel),
       repCompany: S.config.name, repFy: fy, repKpis: repKpis, repLines: repLines,
       repProv: { cinHd: fmt(histCin), cinFd: fmt(fcstCin), cinAr: fmt(arTotal), payPaid: fmt(histPay), payFp: fmt(fcstPay), payAp: fmt(apOutstanding) }
     };
@@ -510,11 +505,11 @@
       card(
         '<div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:6px;">' +
           '<div><div class="serif" style="font-size:18px; font-weight:700;">全年现金轨迹</div>' +
-          '<div style="font-size:12px; color:var(--muted); margin-top:3px;">每周末预计银行余额 · <b style="color:var(--plum);">实线＝实际</b>，<b style="color:var(--orchid);">橙点线＝预测(FD·贯穿全年)</b>，<b style="color:#3f8f6b;">绿点线＝已订(AR·应收，仅数周)</b> · <b style="color:' + V.varAggColor + ';">' + esc(V.varAggStr) + '</b></div></div>' +
+          '<div style="font-size:12px; color:var(--muted); margin-top:3px;">每周末预计银行余额 · <b style="color:var(--plum);">实线＝实际</b>，<b style="color:var(--orchid);">橙点线＝现金</b>，<b style="color:#3f8f6b;">绿点线＝现金＋应收</b> · 两线差额＝未收应收 · <b style="color:' + V.varAggColor + ';">' + esc(V.varAggStr) + '</b></div></div>' +
           '<div style="display:flex; gap:14px; font-size:12px; flex-wrap:wrap;">' +
             '<span style="display:flex; align-items:center; gap:6px;"><span style="width:16px; height:3px; background:var(--plum); border-radius:2px; display:inline-block;"></span>实际</span>' +
-            '<span style="display:flex; align-items:center; gap:6px;"><span style="width:16px; height:0; border-top:3px dashed var(--orchid); display:inline-block;"></span>预测 FD</span>' +
-            '<span style="display:flex; align-items:center; gap:6px;"><span style="width:16px; height:0; border-top:3px dashed #3f8f6b; display:inline-block;"></span>已订 AR</span>' +
+            '<span style="display:flex; align-items:center; gap:6px;"><span style="width:16px; height:0; border-top:3px dashed var(--orchid); display:inline-block;"></span>现金</span>' +
+            '<span style="display:flex; align-items:center; gap:6px;"><span style="width:16px; height:0; border-top:3px dashed #3f8f6b; display:inline-block;"></span>现金＋应收</span>' +
           '</div>' +
         '</div>' +
         '<div style="position:relative;">' + cashChart(V, 'cash', true) +
@@ -536,9 +531,9 @@
                 '<text x="65" y="77" text-anchor="middle" class="num" style="font-size:12px; font-weight:600; fill:var(--plum2);">' + esc(V.totalPayWan) + '</text>' +
               '</svg><div style="flex:1;">' + donutLegend + '</div></div>') +
           '<div style="background:#c0613f; color:#fff; border-radius:16px; padding:20px 22px; box-shadow:0 14px 34px -18px rgba(60,42,28,.6);">' +
-            '<div style="font-size:13px; color:#ecc6ab;">应收账款合计</div>' +
+            '<div style="font-size:13px; color:#ecc6ab;">应收账款余额（未收）</div>' +
             '<div class="num" style="font-size:28px; font-weight:600; margin:6px 0 4px;">' + esc(V.arTotalWan) + '</div>' +
-            '<div style="font-size:12px; color:#d2bfa6;">' + V.arCount + ' 位客户 · 预计本周回款 ' + esc(V.arWeekCollectWan) + '</div></div>' +
+            '<div style="font-size:12px; color:#d2bfa6;">本周已收 ' + esc(V.arWeekCollectWan) + '</div></div>' +
         '</div>' +
       '</div></div>';
   }
@@ -663,18 +658,18 @@
           '<div style="font-size:11.5px; color:var(--muted); margin-top:12px;">提示：预测金额由「假设」页的命名因子驱动（单价、回款率、销量、淘汰率、成本、租金计划等）。修改对应周的假设，此处实时更新。</div>') +
       '</div>' +
       card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' + h2('收款测算 · ' + V.selWeekLabel + '（每周 · 元）') + '<span style="font-size:11.5px; color:var(--gold); background:#f6edda; padding:4px 10px; border-radius:7px;">已扣除预测淘汰率 ' + esc(V.revBreak.defect) + '</span></div>' +
-        '<div style="font-size:12px; color:var(--muted); margin-bottom:16px;">数量 × 单价 → 预测收款（FD：各渠道大花 + 小花 + 染色花 + 切花，再 × 当周回款率）· 应收账款（已订 AR）<b>并列显示、不计入 FD</b>，仅供对比</div>' +
+        '<div style="font-size:12px; color:var(--muted); margin-bottom:16px;">数量 × 单价 → 预测收款（FD：各渠道大花 + 小花 + 染色花 + 切花，再 × 当周回款率）· 加上本周已收（应收账款）＝本周收款合计</div>' +
         '<div style="display:grid; grid-template-columns:1fr 1.4fr; gap:22px;">' +
           '<div><div style="font-size:13px; font-weight:700; color:var(--gold); margin-bottom:10px;">国外收款</div>' + foreign +
             '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted);"><span>国外毛收入小计</span><span class="num">' + esc(V.revBreak.foreignGross) + '</span></div>' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>× 当周回款率 ' + esc(V.revBreak.collectRate) + '</span><span class="num">' + esc(V.revBreak.foreignSales) + '</span></div>' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:10px; border-top:1px solid var(--line);"><span style="font-size:13px; font-weight:700; color:var(--orchid);">预测收款 (FD)</span><span class="num" style="font-size:16px; font-weight:700; color:var(--orchid);">' + esc(V.revBreak.foreignTotal) + '</span></div>' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;"><span style="font-size:13px; font-weight:700; color:#3f8f6b;">应收账款 (已订 AR)</span><span class="num" style="font-size:16px; font-weight:700; color:#3f8f6b;">' + esc(V.revBreak.arForeign) + '</span></div></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>× 当周回款率 ' + esc(V.revBreak.collectRate) + ' = 预测收款 (FD)</span><span class="num" style="color:var(--orchid);">' + esc(V.revBreak.foreignTotal) + '</span></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>＋ 本周已收 (应收账款)</span><span class="num" style="color:#3f8f6b;">' + esc(V.revBreak.arForeign) + '</span></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:10px; border-top:1px solid var(--line);"><span style="font-size:13px; font-weight:700;">国外收款合计</span><span class="num" style="font-size:16px; font-weight:700; color:var(--gold);">' + esc(V.revBreak.foreignSum) + '</span></div></div>' +
           '<div><div style="font-size:13px; font-weight:700; color:var(--plum); margin-bottom:10px;">国内收款</div>' + dom +
             '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted);"><span>国内毛收入小计</span><span class="num">' + esc(V.revBreak.domGross) + '</span></div>' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>× 当周回款率 ' + esc(V.revBreak.collectRate) + '</span><span class="num">' + esc(V.revBreak.domSales) + '</span></div>' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:10px; border-top:1px solid var(--line);"><span style="font-size:13px; font-weight:700; color:var(--orchid);">预测收款 (FD)</span><span class="num" style="font-size:16px; font-weight:700; color:var(--orchid);">' + esc(V.revBreak.domesticTotal) + '</span></div>' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;"><span style="font-size:13px; font-weight:700; color:#3f8f6b;">应收账款 (已订 AR)</span><span class="num" style="font-size:16px; font-weight:700; color:#3f8f6b;">' + esc(V.revBreak.arCollect) + '</span></div></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>× 当周回款率 ' + esc(V.revBreak.collectRate) + ' = 预测收款 (FD)</span><span class="num" style="color:var(--orchid);">' + esc(V.revBreak.domesticTotal) + '</span></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); margin-top:4px;"><span>＋ 本周已收 (应收账款)</span><span class="num" style="color:#3f8f6b;">' + esc(V.revBreak.arCollect) + '</span></div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:10px; border-top:1px solid var(--line);"><span style="font-size:13px; font-weight:700;">国内收款合计</span><span class="num" style="font-size:16px; font-weight:700; color:var(--plum);">' + esc(V.revBreak.domesticSum) + '</span></div></div>' +
         '</div>', ' margin-top:16px;') +
     '</div>';
   }
@@ -700,7 +695,7 @@
         '<span style="width:30px; height:30px; border-radius:9px; background:var(--lilac); color:var(--plum); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;">' + esc(g.sym) + '</span>' +
         '<div class="serif" style="font-size:16px; font-weight:700; flex:1;">' + esc(g.title) + '</div>' +
         (['seed', 'material', 'opex'].indexOf(g.gid) >= 0 ? '<button data-action="addAssume" data-group="' + g.gid + '" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:5px 10px; font-size:11.5px; font-weight:600; cursor:pointer;">+ 新增项目</button>' : '') + '</div>' +
-        '<div style="font-size:12px; color:var(--muted); margin:0 0 14px 40px;">' + esc(g.desc) + '</div>' + fields + customs);
+        '<div style="font-size:12px; color:var(--muted); margin:0 0 14px 40px;">' + esc(g.desc) + '</div>' + (g.display || '') + fields + customs);
     }).join('');
 
     function schedTable(title, desc, arr, rows, addLabel, ph) {
@@ -851,57 +846,27 @@
 
   // ---------- RECEIVABLES ----------
   function renderAr(V) {
-    var catOpt = function (sel) { return V.catOptions.map(function (o) { return '<option value="' + escA(o) + '"' + (o === sel ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join(''); };
-    var cats = V.catSummary.map(function (c) {
-      return '<div style="background:#fff; border-radius:13px; padding:12px 15px; box-shadow:0 8px 22px -18px rgba(60,42,28,.4); border:1px solid var(--line); border-left:4px solid ' + c.color + ';"><div style="font-size:12px; color:var(--muted);">' + esc(c.cat) + '</div><div class="num" style="font-size:18px; font-weight:600; margin-top:4px; color:var(--plum2);">' + esc(c.val) + '</div></div>';
-    }).join('');
-    var customers = V.custRows.map(function (c) {
-      var ships = c.ships.map(function (sh) {
-        var cwLbl = sh.computedWeek != null ? '第' + (sh.computedWeek + 1) + '周' : '未定';
-        var overridden = sh.collectWeek !== '';
-        return '<div style="border:1px solid #f1ebdf; border-radius:8px; padding:8px 10px; margin-bottom:6px;">' +
-          '<div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap;">' +
-            '<span style="font-size:10.5px; color:var(--muted);">货值</span>' +
-            '<input class="fld" inputmode="numeric" ' + bArr('arShipments', sh.si, 'value') + ' value="' + escA(sh.value) + '" placeholder="0" style="width:104px; text-align:right; ' + FLD + '">' +
-            '<span style="font-size:10.5px; color:var(--muted);">出货日期</span>' +
-            '<input class="fld" type="date" ' + bArr('arShipments', sh.si, 'date') + ' value="' + escA(sh.date) + '" style="width:140px; ' + FLD + '">' +
-            '<span style="font-size:10.5px; color:var(--muted);">预计回款</span>' +
-            '<span style="font-size:11.5px; font-weight:700; color:var(--leaf);">' + cwLbl + '</span>' +
-            '<span style="font-size:9.5px; color:' + (overridden ? 'var(--orchid)' : 'var(--muted)') + ';">' + (overridden ? '覆盖' : '自动(出货日+账期)') + '</span>' +
-            '<button data-action="delRow" data-arr="arShipments" data-idx="' + sh.si + '" style="margin-left:auto; background:none; border:none; color:var(--rose); cursor:pointer; font-size:14px; opacity:.6;">×</button>' +
-          '</div>' +
-          '<div style="margin-top:6px; display:flex; align-items:center; gap:8px;">' +
-            '<span style="font-size:10.5px; color:var(--muted); flex:none;">回款周覆盖</span><div style="flex:1; min-width:0;">' + weekPicker('arShipments', sh.si, 'collectWeek', sh.collectWeek, V) + '</div>' +
-            (overridden ? '<button data-action="clearArWeek" data-idx="' + sh.si + '" style="flex:none; background:none; border:1px solid var(--field-bd); border-radius:6px; padding:5px 9px; font-size:10.5px; color:var(--rose); cursor:pointer;">清除</button>' : '') +
-          '</div>' +
-        '</div>';
-      }).join('');
-      return '<div style="border:1px solid var(--line); border-radius:12px; padding:13px 15px; margin-bottom:12px; background:#fff;">' +
-        '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">' +
-          '<input class="fld txt" ' + bArr('customers', c.idx, 'name') + ' value="' + escA(c.name) + '" style="flex:1; min-width:140px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 9px; font-size:13px; font-weight:600;">' +
-          '<select class="fld txt" ' + bArr('customers', c.idx, 'cat') + ' style="width:82px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 4px; font-size:11.5px; font-weight:600; color:' + c.catColor + ';">' + catOpt(c.cat) + '</select>' +
-          '<input class="fld txt" ' + bArr('customers', c.idx, 'note') + ' value="' + escA(c.note) + '" placeholder="备注" style="width:130px; border:1px solid var(--field-bd); background:var(--field); border-radius:7px; padding:6px 9px; font-size:12px;">' +
-          '<span style="font-size:11px; color:var(--muted);">应收余额 <b class="num" style="font-size:14px; color:var(--plum2);">' + esc(c.outstandingStr) + '</b></span>' +
-          '<button data-action="delRow" data-arr="customers" data-idx="' + c.idx + '" style="margin-left:auto; background:none; border:none; color:var(--rose); cursor:pointer; font-size:16px; opacity:.6;">×</button>' +
-        '</div>' +
-        '<div style="display:grid; grid-template-columns:1.15fr 1fr; gap:14px; align-items:start;">' +
-          '<div><div style="font-size:11px; color:var(--muted); margin-bottom:5px;">出货记录（货值 + 出货日期，汇总为应收余额）</div>' + ships +
-            '<button data-action="addArShip" data-cust="' + escA(c.id) + '" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:7px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer;">+ 添加出货</button></div>' +
-          '<div><div style="font-size:11px; color:var(--muted); margin-bottom:3px;">默认回款周（兜底：仅用于没有出货日期的出货 · 每笔出货优先用上方「预计回款」）</div>' + weekPicker('customers', c.idx, 'collectWeek', c.collectWeek, V) + '</div>' +
+    var rows = V.arRows.map(function (r) {
+      function fld(key, val, ph) {
+        return '<input class="fld" inputmode="numeric" ' + bMap('ar', key) + ' value="' + escA(val) + '" placeholder="' + escA(ph || '0') + '" style="width:100%; text-align:right; ' + FLD + '">';
+      }
+      return '<div style="border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; background:#fff;">' +
+        '<div style="font-size:14px; font-weight:700; color:var(--plum2); margin-bottom:10px;">' + esc(r.name) + '</div>' +
+        '<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">' +
+          '<div><div style="font-size:11.5px; color:var(--muted); margin-bottom:4px;">预计应收金额（余额 · 继承上周）</div>' + fld(r.expKey, r.exp, r.expPh) + '</div>' +
+          '<div><div style="font-size:11.5px; color:var(--muted); margin-bottom:4px;">本周新增应收金额</div>' + fld(r.addKey, r.add) + '</div>' +
+          '<div><div style="font-size:11.5px; color:#3f8f6b; margin-bottom:4px;">本周已收金额 → 收款</div>' + fld(r.rcvKey, r.rcv) + '</div>' +
         '</div>' +
       '</div>';
     }).join('');
 
     return '<div>' +
-      '<div style="display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:14px; margin-bottom:16px;">' +
-        '<div style="background:#c0613f; color:#fff; border-radius:15px; padding:18px 20px;"><div style="font-size:13px; color:#ecc6ab;">应收账款合计</div><div class="num" style="font-size:27px; font-weight:600; margin-top:6px;">' + esc(V.arOutWan) + '</div></div>' +
-        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);"><div style="font-size:13px; color:var(--muted);">本周预计回款（自动）</div><div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--leaf);">' + esc(V.arWeekCollectWan) + '</div></div>' +
-        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);"><div style="font-size:13px; color:var(--muted);">客户数</div><div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--plum2);">' + V.arCount + ' <span style="font-size:13px; color:var(--muted);">位</span></div></div>' +
+      card('<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;"><div style="font-size:13px; font-weight:700; color:var(--plum2);">选择周次 · 各周独立 · 预计应收继承上周</div><div style="font-size:11.5px; color:var(--muted);">正在编辑：<b style="color:var(--plum);">' + esc(V.selWeekLabel) + '</b></div></div>' + chips(V.allWeeks), ' margin-bottom:16px;') +
+      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">' +
+        '<div style="background:#c0613f; color:#fff; border-radius:15px; padding:18px 20px;"><div style="font-size:13px; color:#ecc6ab;">本周应收余额（国内+国外）</div><div class="num" style="font-size:27px; font-weight:600; margin-top:6px;">' + esc(V.arOutWan) + '</div></div>' +
+        '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);"><div style="font-size:13px; color:var(--muted);">本周已收（计入收款）</div><div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--leaf);">' + esc(V.arRcvSelWan) + '</div></div>' +
       '</div>' +
-      '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;">' + cats + '</div>' +
-      card('<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;"><div>' + h2('客户应收账款') + '<div style="font-size:12px; color:var(--muted);">每位客户：出货记录（货值+日期）汇总为应收余额 · 选择回款周 → 自动计入该周「国内/国外收款」及上方汇总</div></div>' +
-        '<button data-action="addRow" data-arr="customers" style="background:var(--lilac); color:var(--plum); border:1px solid var(--field-bd); border-radius:8px; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer;">+ 新增客户</button></div>' +
-        (customers || '<div style="padding:16px; text-align:center; color:var(--muted); font-size:12px;">暂无客户 · 点击「+ 新增客户」</div>')) +
+      card('<div style="margin-bottom:12px;">' + h2('应收账款 · ' + V.selWeekLabel) + '<div style="font-size:12px; color:var(--muted);">按渠道（国内 / 国外）逐周登记：预计应收余额（继承上周）· 本周新增 · 本周已收。「本周已收」计入当周「收款」；「预计应收」显示在「假设 · 回款节奏」，并形成现金图上的「现金 + 应收」线。</div></div>' + rows) +
     '</div>';
   }
 
@@ -970,11 +935,10 @@
       lifecycle: '应收（要收的钱）和应付（要付的货款、运费）都在这一阶段登记。',
       hooks: '应收→绿色点线“已订(AR)”+报告【应收】列；应付/运费→现金轨迹支出（逾期未付会滚入本周）。',
       steps: [
-        { hi: 'ar', page: 'ar', where: '应收账款页（要收的钱）', btn: '高亮 应收账款 字段', fields: [
-          ['客户 · 分类', '决定收款走哪条线、用哪个账期', '路由 + 账期'],
-          ['出货记录 · 货值(元)', '已发货物的金额', 'AR 金额'],
-          ['出货记录 · 出货日期', '发货日；＋账期＝预计回款周', 'AR 时间'],
-          ['回款周覆盖（每笔）', '手动指定回款周（留空＝自动）', 'AR 时间（覆盖）']
+        { hi: 'ar', page: 'ar', where: '应收账款页（要收的钱 · 按国内/国外逐周）', btn: '高亮 应收账款 字段', fields: [
+          ['预计应收金额', '应收余额（继承上周、可改）', '现金+应收 线'],
+          ['本周新增应收金额', '本周新增的应收', '应收余额'],
+          ['本周已收金额', '本周实际收到的应收', '→ 计入本周收款']
         ] },
         { hi: 'ap', page: 'seedpay', where: '苗/花应付款页（要付的货款）', btn: '高亮 苗/花应付款 字段', fields: [
           ['选择批次', '把「进货验货」批次连成一笔应付款', 'AP 来源'],
@@ -1223,12 +1187,10 @@
       case 'pickWeek': store.editArr(btn.dataset.arr, +btn.dataset.idx, btn.dataset.key, +btn.dataset.week); break;
       case 'scrollChips': { var sc = document.getElementById('weekChipScroll'); if (sc && sc.scrollBy) sc.scrollBy({ left: (+btn.dataset.dir) * Math.max(sc.clientWidth * 0.8, 200), behavior: 'smooth' }); break; }
       case 'addRow': store.addRow(btn.dataset.arr); break;
-      case 'addArShip': store.addRow('arShipments', { custId: btn.dataset.cust }); break;
       case 'delRow': store.delRow(btn.dataset.arr, +btn.dataset.idx); break;
       case 'addAssume': store.addAssumeItem(btn.dataset.group); break;
       case 'delCustom': store.delCustom(btn.dataset.id); break;
       case 'togglePaid': { var pp = store.state.payables[+btn.dataset.idx]; if (pp) store.editArr('payables', +btn.dataset.idx, 'paid', !pp.paid); break; }
-      case 'clearArWeek': store.editArr('arShipments', +btn.dataset.idx, 'collectWeek', ''); break;
       case 'toggleFreightPaid': { var sf = store.state.shipments[+btn.dataset.idx]; if (sf) store.editArr('shipments', +btn.dataset.idx, 'freightPaid', !sf.freightPaid); break; }
       case 'print': window.print(); break;
       case 'logout': doLogout(); break;
@@ -1304,11 +1266,8 @@
     merged.config = Object.assign({}, d.config, s.config || {}); // guard new config keys
     // 今日/截至 tracks the real current date (China time) unless the user pinned it
     if (!merged.config.asOfManual) merged.config.asOfISO = FFStore.todayISO();
-    // migration guards (older saved states): ensure customer ids + new arrays
-    merged.customers = (merged.customers || []).map(function (c) {
-      return c && c.id ? c : Object.assign({ id: 'c_' + Math.random().toString(36).slice(2, 8) }, c);
-    });
-    if (!Array.isArray(merged.arShipments)) merged.arShipments = [];
+    // migration guards (older saved states)
+    if (!merged.ar || typeof merged.ar !== 'object' || Array.isArray(merged.ar)) merged.ar = {};
     if (!Array.isArray(merged.shipments)) merged.shipments = d.shipments;
     if (!Array.isArray(merged.payables)) merged.payables = [];
     if (!Array.isArray(merged.suppliers)) {  // derive supplier list from existing shipment suppliers

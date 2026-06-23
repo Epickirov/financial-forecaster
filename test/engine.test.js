@@ -20,12 +20,10 @@ test('shipped defaultModel keeps names/specs but clears all financial figures', 
   var d = FFStore.defaultModel();
   assert.strictEqual(d.config.openingBalance, '', 'opening balance cleared');
   Object.keys(d.assume).forEach(function (k) { assert.strictEqual(d.assume[k], '', 'assume.' + k + ' cleared'); });
-  ['sales', 'fcst', 'actual'].forEach(function (m) { assert.deepStrictEqual(d[m], {}, m + ' empty'); });
+  ['sales', 'fcst', 'actual', 'ar'].forEach(function (m) { assert.deepStrictEqual(d[m], {}, m + ' empty'); });
   assert.deepStrictEqual(d.payables, [], 'payables empty');
-  assert.deepStrictEqual(d.arShipments, [], 'arShipments empty');
   d.rents.forEach(function (r) { assert.ok(r.name, 'rent name kept'); assert.strictEqual(r.amount, '', 'rent amount cleared'); });
   d.fixed.forEach(function (r) { assert.ok(r.name, 'fixed name kept'); assert.strictEqual(r.amount, '', 'fixed amount cleared'); });
-  d.customers.forEach(function (c) { assert.ok(c.id && c.name, 'customer id + name kept'); assert.strictEqual(c.collectWeek, '', 'collectWeek cleared'); });
   d.shipments.forEach(function (sh) { assert.ok(sh.supplier && sh.spec, 'shipment supplier+spec kept'); assert.strictEqual(sh.qty, '', 'shipment qty cleared'); assert.strictEqual(sh.amount, '', 'shipment amount cleared'); assert.strictEqual(sh.iq, '', 'shipment IQ cleared'); });
 });
 
@@ -96,66 +94,32 @@ test('computed splits foreign/domestic from named drivers', function () {
   approx(c.foreign, expF, 1e-3);
 });
 
-// ---- 应收账款: per-shipment collection = 出货周 + 分类账期 ------------------
-test('应收账款: per-shipment collection week = 出货周 + 分类账期 (国外→foreign, 其余→domestic)', function () {
+// ---- 应收账款 ledger (per-week by channel) + cash wiring -------------------
+test('应收账款 ledger: 预计应收 carries forward; 本周已收 adds to 收款; 现金+应收 line', function () {
   var s = fresh();
-  // demo: ar1 c1省内 186000 @2026-05-20 (wk13), ar2 c3国外 515000 @2026-05-18 (wk12),
-  //       ar3 c2省内 240000 @2026-05-25 (wk13). default 账期: 省内=2, 国外=4.
-  assert.strictEqual(E.arCollectWeek(s, s.arShipments[0]), 15); // ar1: 13 + 2
-  assert.strictEqual(E.arCollectWeek(s, s.arShipments[1]), 16); // ar2: 12 + 4
-  assert.strictEqual(E.arCollectWeek(s, s.arShipments[2]), 15); // ar3: 13 + 2
-  approx(E.customerOutstanding(s, 'c1'), 186000);   // outstanding = sum of that customer's AR shipments
-  var d15 = E.arDueInWeek(s, 15), d16 = E.arDueInWeek(s, 16);
-  approx(d15.domestic, 186000 + 240000);    // ar1 + ar3 (省内 → 国内收款)
-  approx(d15.foreign, 0);
-  approx(d16.foreign, 515000);              // ar2 (国外 → 国外收款)
-  approx(d16.domestic, 0);
-  // these still feed computed's per-channel breakdown helpers
-  var c = E.computed(s, 16);
-  approx(c._arForeign, 515000);
+  // demo ar: wk15 exp dom=200000/for=500000; wk16 rcv dom=60000/for=120000, add dom=50000
+  approx(E.arExp(s, 15, 'dom'), 200000);
+  approx(E.arExp(s, 16, 'dom'), 200000);            // carries forward from wk15
+  approx(E.arExp(s, 16, 'for'), 500000);
+  approx(E.arExpectedTotal(s, 16), 700000);
+  approx(E.arRcv(s, 16, 'dom'), 60000);
+  approx(E.arReceivedTotal(s, 16), 180000);
+  approx(E.arAdd(s, 16, 'dom'), 50000);
+  // 本周已收 adds to that week's 收款 (series cin); wk16 is future → eff = fcOf
+  var base = E.fcOf(s, 16, 'foreign') + E.fcOf(s, 16, 'domestic');
+  approx(E.series(s)[16].cin, base + 180000);
+  // 现金 + 应收 line = forecast cash + outstanding 预计应收
+  var fc = E.forecastCloses(s), cp = E.cashPlusARCloses(s);
+  approx(cp[16] - fc[16], 700000);
 });
 
-test('应收账款: per-shipment override beats date+lag; editable 账期 shifts timing', function () {
+test('应收账款: blank 预计应收 inherits previous week; a later week overrides forward only', function () {
   var s = fresh();
-  s.arShipments[0].collectWeek = '20';                          // explicit override
-  assert.strictEqual(E.arCollectWeek(s, s.arShipments[0]), 20);
-  approx(E.arDueInWeek(s, 20).domestic, 186000);
-  approx(E.arDueInWeek(s, 15).domestic, 240000);                // only ar3 remains in wk15
-  var s2 = fresh();
-  s2.assume.lagProvIn = '5';                                    // 省内 账期 2 → 5 weeks
-  assert.strictEqual(E.arCollectWeek(s2, s2.arShipments[2]), 18); // ar3: 13 + 5
-  approx(E.arDueInWeek(s2, 18).domestic, 186000 + 240000);
-  approx(E.arDueInWeek(s2, 15).domestic, 0);
-});
-
-test('应收账款: falls back to per-customer 回款周 when shipment has no date/override', function () {
-  var s = fresh();
-  s.arShipments[0].date = ''; s.arShipments[0].collectWeek = '';  // neither date nor override
-  var cw = parseInt(s.customers[0].collectWeek, 10);              // c1.collectWeek = wTarget+2 = 16
-  assert.strictEqual(E.arCollectWeek(s, s.arShipments[0]), cw);
-  approx(E.arDueInWeek(s, cw).domestic, 186000);
-});
-
-// ---- never-sum: FD (forecast) and AR (booked) are parallel, never combined --
-test('computed.foreign/domestic are FD-only; AR is a parallel band, not summed in', function () {
-  var s = fresh();
-  var c = E.computed(s, 16);                       // ar2 (国外 515000) collects wk16
-  approx(c.foreign, c._foreignSales);              // foreign = forecast sales collection ONLY
-  approx(c.domestic, c._domSales);
-  approx(c._arForeign, 515000);                    // AR is exposed separately as its own band
-  assert.ok(Math.abs(c.foreign - (c._foreignSales + c._arForeign)) > 1, 'foreign excludes the AR band');
-});
-
-// ---- the committed (booked-AR) projection line ---------------------------
-test('committedCloses branches from the actual balance and projects on booked AR only, then stops', function () {
-  var s = fresh();
-  var cc = E.committedCloses(s), ser = E.series(s), cw = E.currentWeekIdx(s);  // cw = 16
-  approx(cc[cw - 1], ser[cw - 1].close);           // branches from the last settled week's actual balance
-  assert.ok(cc[cw] != null, 'committed line defined through the AR horizon (wk16)');
-  assert.strictEqual(cc[cw + 1], null, 'committed line stops once bookings run out');
-  // wk16 step adds ONLY booked AR (515000), not forecast sales, and rolls in 逾期应付 + 逾期运费
-  var pays = E.PAYCATS.reduce(function (a, p) { return a + E.fcPayOf(s, cw, p); }, 0);
-  approx(cc[cw], cc[cw - 1] + 515000 - pays - E.overduePayables(s) - E.overdueFreight(s));
+  approx(E.arExp(s, 30, 'dom'), 200000);            // wk30 blank → inherits wk15's 200000
+  approx(E.arInheritedExp(s, 16, 'dom'), 200000);   // value strictly before wk16
+  s.ar['18:dom:exp'] = '90000';
+  approx(E.arExp(s, 19, 'dom'), 90000);             // carries forward from the new wk18 value
+  approx(E.arExp(s, 17, 'dom'), 200000);            // weeks before 18 unaffected
 });
 
 // ---- 瓶苗 type, 总金额/已付/未付 totals, 逾期运费 -----------------------------
