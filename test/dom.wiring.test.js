@@ -185,7 +185,7 @@ nav('assume');
 click([...app.querySelectorAll('[data-action="selectWeek"]')].find(b => +b.dataset.idx === arWk));
 ok(app.innerHTML.includes('国外应收') && [...app.querySelectorAll('input[data-map="assumeWeek"]')].every(i => !/:lag/.test(i.dataset.key)), '假设·回款节奏 shows 应收 read-only (no 账期 inputs)');
 
-// ---------- 8. SETTINGS: opening balance, fiscal dates, as-of (now on 设置 page) ----------
+// ---------- 8. SETTINGS: opening balance + (manual) fiscal dates ----------
 nav('settings');
 const obal = window.document.getElementById('c|openingBalance');
 setV(obal, '1234567');
@@ -193,9 +193,6 @@ ok(S().config.openingBalance === '1234567' && approx(E.series(S())[0].open, 1234
 const wkCountBefore = E.weeks(S()).length;
 setV(window.document.getElementById('c|endISO'), '2026-08-31', 'change');
 ok(E.weeks(S()).length < wkCountBefore, '财年结束日期改变 → 周网格重新生成（变短）');
-const histBefore = E.series(S()).filter(s => s.isHist).length;
-setV(window.document.getElementById('c|asOfISO'), '2026-03-15', 'change');
-ok(E.series(S()).filter(s => s.isHist).length < histBefore, '截至日期提前 → 历史周减少（更多预测周）');
 click(app.querySelector('[data-action="toggleUnit"]'));
 ok(S().config.unit === '元', '单位切换 万→元');
 nav('dash');   // settings page renders no fmt money; check ¥ on a money page
@@ -207,7 +204,7 @@ const _fp0 = S().shipments[0].freightPaid;
 click(app.querySelector('[data-action="toggleFreightPaid"][data-idx="0"]'));
 ok(S().shipments[0].freightPaid !== _fp0, '物流 已付/未付 toggle flips shipments[0].freightPaid');
 
-// ---------- 10. SETTINGS: 农历财年 / 截至 auto↔manual toggles ----------
+// ---------- 10. SETTINGS: 农历财年 auto↔manual toggle ----------
 nav('settings');
 click([...app.querySelectorAll('[data-action="setFyMode"]')].find(b => b.dataset.mode === 'auto'));
 const lf = E.lunarFY(S().config.asOfISO);
@@ -215,19 +212,14 @@ ok(S().config.fyMode === 'auto', '农历财年 切换到自动');
 ok(E.weeks(S())[0].startISO === lf.startISO, '自动模式下周网格起点 = 当前农历年正月初一 (' + lf.startISO + ')');
 click([...app.querySelectorAll('[data-action="setFyMode"]')].find(b => b.dataset.mode === 'manual'));
 ok(S().config.fyMode === 'manual' && S().config.startISO === lf.startISO, '切回手动并以当前农历窗口预置起止日期');
-click([...app.querySelectorAll('[data-action="setAsOfMode"]')].find(b => b.dataset.mode === 'auto'));
-ok(S().config.asOfManual === false && S().config.asOfISO === window.FFStore.todayISO(), '截至 切换到自动 → 跟随北京时间今天');
 
-// ---------- 11. 今日 marker tracks the real current date, NOT the 截至 pin ----------
+// ---------- 11. 今日 = real today: no 截至 field; 实际 line caps at 今日 ----------
 nav('settings');
-click([...app.querySelectorAll('[data-action="setAsOfMode"]')].find(b => b.dataset.mode === 'manual'));
-const fyEnd = E.weeks(S())[E.weeks(S()).length - 1].endISO;
-setV(window.document.getElementById('c|asOfISO'), fyEnd, 'change');   // the old edge-pin case
-ok(S().config.asOfISO === fyEnd, '截至 pinned to the fiscal-year end');
+ok([...app.querySelectorAll('[data-action="setAsOfMode"]')].length === 0 && !window.document.getElementById('c|asOfISO'), '设置 has no 截至 controls — 今日 is auto-only');
 nav('dash');
-const Wk = E.weeks(S()), todayIso = window.FFStore.todayISO();
-let expIdx = Wk.findIndex(w => todayIso >= w.startISO && todayIso <= w.endISO);
-if (expIdx < 0) expIdx = todayIso < Wk[0].startISO ? 0 : Wk.length - 1;
-ok(buildView(S()).todayWeekNo === expIdx + 1, '今日 marker = real-today week, independent of the 截至 pin (no longer dragged to the chart edge)');
+const Wk = E.weeks(S());
+let lastH = -1; for (let i = 0; i < Wk.length; i++) if (E.isHist(S(), i)) lastH = i;
+ok(lastH >= 0 && Wk[lastH].endISO <= S().config.asOfISO && (lastH + 1 >= Wk.length || Wk[lastH + 1].endISO > S().config.asOfISO),
+   '实际(历史)周止于「今日」所在周 — 实际线不会越过今日 (lastHist=' + lastH + ')');
 
 console.log('\n' + pass + ' wiring assertions passed.\n');

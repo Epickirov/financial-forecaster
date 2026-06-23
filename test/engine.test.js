@@ -85,7 +85,7 @@ test('defaultModel ships auto 农历财年; a 2026 as-of yields the legacy fisca
   assert.ok(w[w.length - 1].endISO <= '2027-02-05');
 });
 
-test('setFyMode / setAsOfMode mutate config as expected', function () {
+test('setFyMode mutates the fiscal-year mode + seeds the manual window', function () {
   var noop = function () {};
   var s = new FFStore.Store({ load: function () { return null; }, save: noop, clear: noop });
   s.state.config.asOfISO = '2026-06-23';
@@ -94,30 +94,21 @@ test('setFyMode / setAsOfMode mutate config as expected', function () {
   assert.strictEqual(s.state.config.startISO, '2026-02-17', 'manual seeds the stored window');
   s.setFyMode('auto');
   assert.strictEqual(s.state.config.fyMode, 'auto');
-  s.setAsOfMode('manual');
-  assert.strictEqual(s.state.config.asOfManual, true, 'manual pins the as-of');
-  s.setAsOfMode('auto');
-  assert.strictEqual(s.state.config.asOfManual, false, 'auto un-pins');
-  assert.strictEqual(s.state.config.asOfISO, FFStore.todayISO(), 'auto resets as-of to China today');
 });
 
-// ---- 今日/截至 tracks the real (China) date unless pinned --------------------
-test('asOfISO defaults to China today, refreshes on load, and pins once edited', function () {
+// ---- 今日 ALWAYS tracks the real (China) date — no manual pin ----------------
+test('asOfISO always = China today on load; legacy pins are dropped', function () {
   var today = FFStore.todayISO();
   assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(today), 'todayISO is a valid YYYY-MM-DD');
   var d = FFStore.defaultModel();
-  assert.strictEqual(d.config.asOfISO, today, 'fresh model as-of = China today');
-  assert.strictEqual(d.config.asOfManual, false, 'fresh model is not pinned');
-  // a saved (unpinned) workspace with a stale as-of refreshes to today on load
+  assert.strictEqual(d.config.asOfISO, today, 'fresh model 今日 = China today');
+  assert.ok(!('asOfManual' in d.config), 'no asOfManual pin field on the fresh model');
+  // a saved workspace — even one carrying a legacy pin to the year-end — refreshes to today
   var noop = function () {};
-  var adapter = { load: function () { return { config: { asOfISO: '2020-01-01' } }; }, save: noop, clear: noop };
-  var s1 = new FFStore.Store(adapter);
-  assert.strictEqual(s1.state.config.asOfISO, today, 'unpinned stale as-of refreshes to today');
-  // editing 截至 pins it; a pinned value is preserved on load
-  s1.editConfig('asOfISO', '2026-03-15');
-  assert.strictEqual(s1.state.config.asOfManual, true, 'editing 截至 pins it');
-  var adapter2 = { load: function () { return { config: { asOfISO: '2026-03-15', asOfManual: true } }; }, save: noop, clear: noop };
-  assert.strictEqual(new FFStore.Store(adapter2).state.config.asOfISO, '2026-03-15', 'pinned as-of preserved on load');
+  var legacy = { load: function () { return { config: { asOfISO: '2027-02-05', asOfManual: true } }; }, save: noop, clear: noop };
+  var s1 = new FFStore.Store(legacy);
+  assert.strictEqual(s1.state.config.asOfISO, today, 'stale/pinned as-of refreshes to today regardless of any legacy pin');
+  assert.ok(!('asOfManual' in s1.state.config), 'legacy pin flag is dropped on load');
 });
 
 // ---- assumption carry-forward -------------------------------------------

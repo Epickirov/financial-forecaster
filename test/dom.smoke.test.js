@@ -40,7 +40,7 @@ ok(/财务总览/.test(app.innerHTML), 'dashboard title renders');
 ok(/全年收款/.test(app.innerHTML) && /现金轨迹/.test(app.innerHTML), 'KPI row + chart render');
 
 // 2) every nav page renders without throwing
-const pages = { hist: '销售明细', fcst: '收款测算', assume: '销量与淘汰', seedpay: '应付款登记', logi: '各批次运费', ar: '本周应收余额', report: '财务预测报告', settings: '今日基准（截至）' };
+const pages = { hist: '销售明细', fcst: '收款测算', assume: '销量与淘汰', seedpay: '应付款登记', logi: '各批次运费', ar: '本周应收余额', report: '财务预测报告', settings: '起初资金' };
 Object.keys(pages).forEach(p => {
   click([...app.querySelectorAll('[data-action="nav"]')].find(b => b.dataset.page === p));
   ok(app.innerHTML.includes(pages[p]), 'page "' + p + '" renders (' + pages[p] + ')');

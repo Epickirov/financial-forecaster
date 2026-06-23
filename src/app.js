@@ -60,7 +60,7 @@
       logi: ['物流成本', '各批次运费 · 按付款周计入「生产物资运费」现金流'],
       ar: ['应收账款', '客户应收余额与每周预计回款'],
       report: ['管理层报告', '一页式 · 非财务人员也能读懂'],
-      settings: ['系统设置', '农历财年与今日基准 · 跨年自动切换'],
+      settings: ['系统设置', '农历财年与起初资金 · 农历年跨年自动切换'],
       tut: ['使用教程', '三步了解 HD / AR / FD 如何录入与联动']
     };
     // 农历财年 window: AUTO derives from the lunar calendar (rolls yearly), MANUAL uses stored dates
@@ -114,15 +114,11 @@
       var frac = (cw - 1) + Math.max(0, Math.min(1, g));
       return +xs(Math.max(0, Math.min(ser.length - 1, frac))).toFixed(1);
     }
-    // 截至 (as-of) = the solid↔dotted divider. 今日 = the REAL current date (Beijing
-    // time), independent of any pinned 截至 — the x-axis still spans the whole 农历财年,
-    // so 今日 sits where today truly falls (never dragged to the chart's terminal edge).
+    // config.asOfISO is the date the system treats as 今日 (always the real China
+    // date — see store). It is BOTH the 今日 marker and the actual↔forecast divider,
+    // so the solid line can never extend past today and never reaches the chart edge
+    // unless today truly is the year-end.
     var asOfX = markX(S.config.asOfISO);
-    var todayISO = FFStore.todayISO();
-    var todayX = markX(todayISO);
-    var todayWeekNo = weekIdxOfISO(todayISO) + 1;
-    var _tp = todayISO.split('-');
-    var todayMD = _tp.length === 3 ? (+_tp[1]) + '月' + (+_tp[2]) + '日' : '';
     // Extend the solid ACTUAL line flat to the 今天 mark: the in-progress week
     // has no actuals yet, so carry the last known balance forward. This keeps
     // "solid behind today, dotted (forecast) ahead" aligned exactly to the mark.
@@ -369,10 +365,9 @@
       cfg: S.config, fy: fy, unitLabel: '单位：' + S.config.unit,
       fyMode: S.config.fyMode === 'manual' ? 'manual' : 'auto', fyStartISO: fyWin.startISO, fyEndISO: fyWin.endISO,
       fyYearLabel: E.lunarYearLabel(E.lunarFY(S.config.asOfISO).year), fyWeeks: E.weeks(S).length,
-      asOfManual: !!S.config.asOfManual,
       dashKpis: dashKpis, varAggStr: varAggStr, varAggColor: varAggColor,
       yTicks: yTicks, xTicks: xTicks, trajArea: trajArea, trajForecast: forecastPts, trajActual: actualPts, trajCommitted: committedPts,
-      asOfWeekNo: curW + 1, asOfDate: asOfMD, todayX: todayX, todayWeekNo: todayWeekNo, todayMD: todayMD,
+      asOfX: asOfX, asOfWeekNo: curW + 1, asOfDate: asOfMD,
       monthBars: monthBars, dashDonut: dashDonut, totalPayWan: wan(totalPay) + '万',
       arTotalWan: fmt(arTotal), arWeekCollectWan: fmt(arWeekCollect),
       selWeekLabel: selWk.label, selCloseWan: fmt(selRow.close),
@@ -433,7 +428,7 @@
           '<span style="font-size:15px; color:#ecd9bf; line-height:1;">⚙</span>' +
           '<span style="display:flex; flex-direction:column; gap:1px; line-height:1.3; text-align:left;">' +
             '<span style="font-size:11px; color:#f3ead8; font-weight:600; white-space:nowrap;">农历财年 <span class="num">' + esc(V.fy) + '</span>' + (V.fyMode === 'auto' ? '' : ' <span style="color:#d8b48a;">·手动</span>') + '</span>' +
-            '<span style="font-size:10px; color:#cbb99c; white-space:nowrap;">截至 <span class="num">' + esc((V.cfg.asOfISO || '').slice(5).replace(/-/g, '.')) + '</span> · 第' + V.asOfWeekNo + '周' + (V.asOfManual ? ' ·手动' : '') + '</span>' +
+            '<span style="font-size:10px; color:#cbb99c; white-space:nowrap;">今日 <span class="num">' + esc((V.cfg.asOfISO || '').slice(5).replace(/-/g, '.')) + '</span> · 第' + V.asOfWeekNo + '周</span>' +
           '</span>' +
         '</button>' +
         '<button data-action="toggleUnit" style="background:#f4efe3; color:#5a472b; border:none; border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:700; cursor:pointer;">' + esc(V.unitLabel) + '</button>' +
@@ -469,9 +464,9 @@
       '<polyline points="' + V.trajForecast + '" fill="none" stroke="var(--orchid)" stroke-width="2"' + dash + ' stroke-linecap="round" stroke-linejoin="round"></polyline>' +
       (V.trajCommitted ? '<polyline points="' + V.trajCommitted + '" fill="none" stroke="#3f8f6b" stroke-width="2" stroke-dasharray="5 3" stroke-linecap="round" stroke-linejoin="round"></polyline>' : '') +
       '<polyline points="' + V.trajActual + '" fill="none" stroke="var(--plum)" stroke-width="2.5" stroke-linejoin="round"></polyline>' +
-      '<line x1="' + V.todayX + '" y1="28" x2="' + V.todayX + '" y2="218" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="3 3"></line>' +
-      '<text x="' + V.todayX + '" y="11" text-anchor="middle" style="font-size:10px; fill:var(--gold); font-weight:700;">今日</text>' +
-      '<text x="' + V.todayX + '" y="22" text-anchor="middle" style="font-size:8.5px; fill:var(--gold);">第' + V.todayWeekNo + '周 · ' + esc(V.todayMD) + '</text>' +
+      '<line x1="' + V.asOfX + '" y1="28" x2="' + V.asOfX + '" y2="218" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="3 3"></line>' +
+      '<text x="' + V.asOfX + '" y="11" text-anchor="middle" style="font-size:10px; fill:var(--gold); font-weight:700;">今日</text>' +
+      '<text x="' + V.asOfX + '" y="22" text-anchor="middle" style="font-size:8.5px; fill:var(--gold);">第' + V.asOfWeekNo + '周 · ' + esc(V.asOfDate) + '</text>' +
       '<line id="' + idprefix + 'Guide" x1="0" y1="28" x2="0" y2="218" stroke="var(--plum2)" stroke-width="1" stroke-opacity="0.5" style="opacity:0;"></line>' +
       '<circle id="' + idprefix + 'DotF" r="4" fill="#fff" stroke="var(--orchid)" stroke-width="2" style="opacity:0;"></circle>' +
       '<circle id="' + idprefix + 'DotA" r="4" fill="#fff" stroke="var(--plum)" stroke-width="2" style="opacity:0;"></circle>' +
@@ -1034,19 +1029,12 @@
         seg('setFyMode', 'manual', !fyAuto, '手动指定', '自行设定起止日期，不随农历切换') +
       '</div>' + fyBody, ' margin-bottom:16px;');
 
-    var asAuto = !V.asOfManual;
-    var asBody = asAuto
-      ? readout(esc(V.cfg.asOfISO), '第 ' + V.asOfWeekNo + ' 周 · 每天按北京时间自动更新')
-      : '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' +
-          '<span style="font-size:12px; color:var(--muted);">截至日期</span>' + dateFld('asOfISO', V.cfg.asOfISO) +
-          '<span style="font-size:11.5px; color:var(--muted);">第 ' + V.asOfWeekNo + ' 周</span></div>';
-    var asCard = card(
-      '<div class="serif" style="font-size:17px; font-weight:700; margin-bottom:3px;">今日基准（截至）</div>' +
-      '<div style="font-size:12.5px; color:var(--muted); margin-bottom:14px;">区分「已发生(历史)」与「预测」的分界线，并定位现金轨迹上的「今日」标记</div>' +
-      '<div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">' +
-        seg('setAsOfMode', 'auto', asAuto, '自动（今天）', '按北京时间自动跟随当天') +
-        seg('setAsOfMode', 'manual', !asAuto, '手动指定', '锁定为指定日期，不再跟随今天') +
-      '</div>' + asBody, ' margin-bottom:16px;');
+    // 今日 is no longer a setting: it always = the real Beijing date. Shown read-only
+    // so users can confirm where the 今日 line + 实际/预测 split sit on the chart.
+    var todayCard = card(
+      '<div class="serif" style="font-size:17px; font-weight:700; margin-bottom:3px;">今日</div>' +
+      '<div style="font-size:12.5px; color:var(--muted); margin-bottom:14px;">现金图上「今日」线与「实际 / 预测」分界线的位置 · 自动取北京时间当天，无需设置 · 实际线只画到今日为止</div>' +
+      readout(esc(V.cfg.asOfISO), '第 ' + V.asOfWeekNo + ' 周 · 北京时间自动判定'), ' margin-bottom:16px;');
 
     var obCard = card(
       '<div class="serif" style="font-size:17px; font-weight:700; margin-bottom:3px;">起初资金</div>' +
@@ -1055,10 +1043,10 @@
         '<input class="fld" inputmode="decimal" ' + bCfg('openingBalance') + ' value="' + escA(V.cfg.openingBalance) + '" title="农历财年起始可用资金（元）" style="' + FLD + ' width:220px; text-align:right; color:var(--ink);"><span style="font-size:13px; color:var(--muted);">元</span></div>');
 
     var banner = '<div style="background:#fff8ec; border:1px solid var(--gold); border-left:5px solid var(--gold); border-radius:12px; padding:13px 16px; margin-bottom:18px; font-size:13px; color:#5a4f3f; line-height:1.75;">' +
-      '<b>说明：</b>本页设置的是整套系统的<b>年度基准</b>（农历财年）和<b>今日基准</b>，用于自动生成周数与现金流。' +
-      '这<b>不是</b>数据筛选 / 查看范围 —— 改这里不会隐藏或过滤任何已录入的数据。通常保持「自动」即可。</div>';
+      '<b>说明：</b>本页设置整套系统的<b>农历财年</b>与<b>起初资金</b>，用于自动生成周数与现金流。' +
+      '「今日」始终自动取北京时间当天，无需设置。这里<b>不是</b>数据筛选 / 查看范围 —— 改动不会隐藏或过滤任何已录入的数据。</div>';
 
-    return '<div style="max-width:780px;">' + banner + fyCard + asCard + obCard + '</div>';
+    return '<div style="max-width:780px;">' + banner + fyCard + todayCard + obCard + '</div>';
   }
 
   function renderTutorial() {
@@ -1258,7 +1246,6 @@
       case 'tutExit': tutHi = null; break;
       case 'toggleUnit': store.toggleUnit(); break;
       case 'setFyMode': { if (btn.dataset.mode === 'manual') { var fw = E.fyWindow(store.state); store.setFyMode('manual', fw.startISO, fw.endISO); } else store.setFyMode('auto'); break; }
-      case 'setAsOfMode': store.setAsOfMode(btn.dataset.mode); break;
       case 'selectWeek': store.selectWeek(+btn.dataset.idx); break;
       case 'pickWeek': store.editArr(btn.dataset.arr, +btn.dataset.idx, btn.dataset.key, +btn.dataset.week); break;
       case 'scrollChips': { var sc = document.getElementById('weekChipScroll'); if (sc && sc.scrollBy) sc.scrollBy({ left: (+btn.dataset.dir) * Math.max(sc.clientWidth * 0.8, 200), behavior: 'smooth' }); break; }
@@ -1340,8 +1327,7 @@
     if (!s || typeof s !== 'object') return d;
     var merged = Object.assign({}, d, s);
     merged.config = Object.assign({}, d.config, s.config || {}); // guard new config keys
-    // 今日/截至 tracks the real current date (China time) unless the user pinned it
-    if (!merged.config.asOfManual) merged.config.asOfISO = FFStore.todayISO();
+    delete merged.config.asOfManual;   // 今日 is no longer pinnable; drop legacy pins
     // migration guards (older saved states)
     if (!merged.ar || typeof merged.ar !== 'object' || Array.isArray(merged.ar)) merged.ar = {};
     if (!Array.isArray(merged.shipments)) merged.shipments = d.shipments;
@@ -1399,19 +1385,23 @@
   // short-circuits the /api/state fetch — used after login once we already
   // have the state, and by the test harness to bypass the network gate.
   function enterApp(prefetchedState) {
-    function mount(serverState) {
-      store = new FFStore.Store(new FFStore.RemoteAdapter(), mergeDefault(serverState));
+    // freezeToday: real loads stamp 今日 = the live Beijing date; the test seam
+    // (enterWithState) keeps the fixture's frozen as-of date for deterministic specs.
+    function mount(serverState, freezeToday) {
+      var st = mergeDefault(serverState);
+      if (!freezeToday) st.config.asOfISO = FFStore.todayISO();
+      store = new FFStore.Store(new FFStore.RemoteAdapter(), st);
       store.subscribe(scheduleRender);
       render(store.state);
       window.FFApp.store = store;
       window.FFApp.user = currentUser;
     }
-    if (prefetchedState !== undefined) { mount(prefetchedState); return; }
+    if (prefetchedState !== undefined) { mount(prefetchedState, true); return; }
     renderLoading();
     fetch('/api/state', { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : { state: null }; })
-      .then(function (d) { mount(d.state); })
-      .catch(function () { mount(null); });
+      .then(function (d) { mount(d.state, false); })
+      .catch(function () { mount(null, false); });
   }
 
   function start() {

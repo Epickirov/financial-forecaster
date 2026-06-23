@@ -41,7 +41,7 @@
     return {
       page: 'dash',
       weekIdx: 0,
-      config: { name: '昆明统一生物', fyMode: 'auto', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: todayISO(), asOfManual: false, unit: '万', openingBalance: '' },
+      config: { name: '昆明统一生物', fyMode: 'auto', startISO: '2026-02-17', endISO: '2027-02-05', asOfISO: todayISO(), unit: '万', openingBalance: '' },
       assume: {
         priceForLarge: '', priceForSmall: '', priceForDye: '', priceForCut: '',
         priceDomLarge: '', priceDomSmall: '', priceDomDye: '', priceDomCut: '',
@@ -135,8 +135,9 @@
     if (!saved) return d;
     var merged = Object.assign({}, d, saved);
     merged.config = Object.assign({}, d.config, saved.config || {}); // guard new config keys
-    // 今日/截至 tracks the real current date (China time) unless the user pinned it
-    if (!merged.config.asOfManual) merged.config.asOfISO = todayISO();
+    // 今日 ALWAYS tracks the real current date (China time); it is never user-pinned.
+    merged.config.asOfISO = todayISO();
+    delete merged.config.asOfManual;   // drop any legacy pin from older saved states
     return merged;
   };
 
@@ -162,11 +163,6 @@
     var m = Object.assign({}, this.state[map]); m[key] = val; this.state[map] = m; this._notify();
   };
   Store.prototype.editConfig = function (key, val) {
-    // editing 截至 pins it: from now on it stays put instead of tracking today
-    if (key === 'asOfISO') {
-      var c = Object.assign({}, this.state.config); c.asOfISO = val; c.asOfManual = true;
-      this.state.config = c; this._notify(); return;
-    }
     this.editMap('config', key, val);
   };
 
@@ -216,14 +212,6 @@
     if (c.fyMode === 'manual' && seedStart && seedEnd) { c.startISO = seedStart; c.endISO = seedEnd; }
     this.state.config = c; this._notify();
   };
-  // 截至(今日) mode: 'auto' tracks China-today (unpinned); 'manual' pins the stored date.
-  Store.prototype.setAsOfMode = function (mode) {
-    var c = Object.assign({}, this.state.config);
-    if (mode === 'manual') { c.asOfManual = true; }
-    else { c.asOfManual = false; c.asOfISO = todayISO(); }
-    this.state.config = c; this._notify();
-  };
-
   Store.prototype.selectWeek = function (idx) { this.state.weekIdx = idx; this._notify(); };
   Store.prototype.setPage = function (page) { this.state.page = page; this._notify(); };
   Store.prototype.toggleUnit = function () { this.editConfig('unit', this.state.config.unit === '万' ? '元' : '万'); };
