@@ -209,7 +209,7 @@
     if (['seed', 'material', 'opex'].indexOf(group) < 0) return;
     var id = 'c_' + Math.random().toString(36).slice(2, 8);
     this.state.customItems = this.state.customItems.concat([
-      { id: id, group: group, name: '新项目', unit: '元/月', kind: 'monthlyExpense' }
+      { id: id, group: group, name: '新项目', unit: '元', kind: 'weeklyExpense' }   // per-week, like the rest of 假设
     ]);
     this._notify();
   };

@@ -297,10 +297,10 @@
     var assumeGroups = [
       { gid: 'price', title: '销售单价', desc: '每株价格 · 当周回款率（作用于销售收款）', sym: '¥', fields: [fld('priceForLarge', '国外大花 3.5/3.8寸', '元/株'), fld('priceForSmall', '国外小花 2.8/3.0寸', '元/株'), fld('priceForDye', '国外染色花', '元/株'), fld('priceForCut', '国外切花', '元/株'), fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3.0寸', '元/株'), fld('priceDomDye', '国内染色花', '元/株'), fld('priceDomCut', '国内切花', '元/株'), fld('collectInWeek', '当周回款率', '比例', '0.7 = 当周收回 70%；作用于上方价格×销量的收款')], custom: grpCustom('price') },
       { gid: 'collect', title: '回款节奏', desc: '应收账款分类账期（周）', sym: '%', fields: [fld('lagForeign', '国外应收账期', '周', '出货后约几周回款 · 默认 4'), fld('lagDomestic', '国内应收账期', '周', '默认 2'), fld('lagProvIn', '省内应收账期', '周', '默认 2'), fld('lagProvOut', '省外应收账期', '周', '默认 2')], custom: grpCustom('collect') },
-      { gid: 'volume', title: '销量与淘汰', desc: '各渠道周销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花 3.5/3.8寸', '株/周'), fld('qtyForSmall', '国外小花 2.8/3.0寸', '株/周'), fld('qtyForDye', '国外染色花', '株/周'), fld('qtyForCut', '国外切花', '株/周'), fld('qtyDomLarge', '国内大花 3.5/3.8寸', '株/周'), fld('qtyDomSmall', '国内小花 2.8/3.0寸', '株/周'), fld('qtyDomDye', '国内染色花', '株/周'), fld('qtyDomCut', '国内切花', '株/周'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
-      { gid: 'seed', title: '种苗应付', desc: '每月应付金额（开花株 / 苗 / 瓶苗）', sym: '❀', fields: [fld('huaAmount', '开花株金额', '元/月'), fld('miaoAmount', '苗金额', '元/月'), fld('bottleAmount', '瓶苗款', '元/月')], custom: grpCustom('seed') },
-      { gid: 'material', title: '生产物料成本', desc: '每月物料金额（独立 · 不随销量变动）', sym: '▦', fields: [fld('pkgCost', '包装材料', '元/月'), fld('prodCost', '生产材料', '元/月')], custom: grpCustom('material') },
-      { gid: 'opex', title: '人工 · 水电 · 运费 · 其他', desc: '每月固定运营支出', sym: '⚙', fields: [fld('payrollMonthly', '工资社保税费', '元/月'), fld('utilitiesMonthly', '水电费', '元/月'), fld('freightMonthly', '运费', '元/月'), fld('projectsMonthly', '项目及工程', '元/月'), fld('travelWeekly', '差旅招待（每周）', '元/周'), fld('loanMonthly', '房贷/借款', '元/月')], custom: grpCustom('opex') }
+      { gid: 'volume', title: '销量与淘汰', desc: '各渠道周销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花 3.5/3.8寸', '株'), fld('qtyForSmall', '国外小花 2.8/3.0寸', '株'), fld('qtyForDye', '国外染色花', '株'), fld('qtyForCut', '国外切花', '株'), fld('qtyDomLarge', '国内大花 3.5/3.8寸', '株'), fld('qtyDomSmall', '国内小花 2.8/3.0寸', '株'), fld('qtyDomDye', '国内染色花', '株'), fld('qtyDomCut', '国内切花', '株'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
+      { gid: 'seed', title: '种苗应付', desc: '每周应付金额（开花株 / 苗 / 瓶苗）', sym: '❀', fields: [fld('huaAmount', '开花株金额', '元'), fld('miaoAmount', '苗金额', '元'), fld('bottleAmount', '瓶苗款', '元')], custom: grpCustom('seed') },
+      { gid: 'material', title: '生产物料成本', desc: '每周物料金额（独立 · 不随销量变动）', sym: '▦', fields: [fld('pkgCost', '包装材料', '元'), fld('prodCost', '生产材料', '元')], custom: grpCustom('material') },
+      { gid: 'opex', title: '人工 · 水电 · 运费 · 其他', desc: '每周运营支出', sym: '⚙', fields: [fld('payrollMonthly', '工资社保税费', '元'), fld('utilitiesMonthly', '水电费', '元'), fld('freightMonthly', '运费', '元'), fld('projectsMonthly', '项目及工程', '元'), fld('travelWeekly', '差旅招待', '元'), fld('loanMonthly', '房贷/借款', '元')], custom: grpCustom('opex') }
     ];
 
     // ---- receivables (per customer: shipments → outstanding; collection week) ----
@@ -716,7 +716,7 @@
     }
 
     return '<div>' +
-      card('<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;"><div style="font-size:13px; font-weight:700; color:var(--plum2);">选择周次 · 各周假设独立，留空＝继承上一周</div><div style="font-size:11.5px; color:var(--muted);">正在编辑：<b style="color:var(--plum);">' + esc(V.selWeekLabel) + '</b> 的假设</div></div>' + chips(V.allWeeks), ' margin-bottom:16px;') +
+      card('<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;"><div style="font-size:13px; font-weight:700; color:var(--plum2);">选择周次 · 各周假设独立，留空＝继承上一周 · 所有金额均按周</div><div style="font-size:11.5px; color:var(--muted);">正在编辑：<b style="color:var(--plum);">' + esc(V.selWeekLabel) + '</b> 的假设</div></div>' + chips(V.allWeeks), ' margin-bottom:16px;') +
       '<div style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px; align-items:start;">' + groups +
         schedTable('租金计划 · 按基地', '每处基地的租金、金额与到期月份（逗号分隔，如 5,11 表示 5 月与 11 月各付一次）', 'rents', V.rents, '+ 新增基地', '如 5,11') +
         schedTable('固定支出与保险', '房贷、车辆/人寿/出口保险、软件与专利年费等长期固定支付', 'fixed', V.fixed, '+ 新增条目', '如 1,4,7,10') +

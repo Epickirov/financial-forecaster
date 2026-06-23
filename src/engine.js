@@ -302,17 +302,20 @@
 
     // 苗款 / 开花株款: scheduled payables due this week (from the register), else assumption baseline
     var dueMiao = dueInWeek(state, wIdx, '苗'), dueHua = dueInWeek(state, wIdx, '花'), dueBottle = dueInWeek(state, wIdx, '瓶苗');
-    var seedling = dueMiao > 0 ? dueMiao : g('miaoAmount') / WPM;          // 苗款: booked AP else 苗金额(元/月) FP
-    var flowering = dueHua > 0 ? dueHua : g('huaAmount') / WPM;            // 开花株款: booked AP else 开花株金额(元/月) FP
-    var bottle = dueBottle > 0 ? dueBottle : g('bottleAmount') / WPM;      // 瓶苗款: booked AP else 瓶苗款(元/月) FP
-    var payroll = g('payrollMonthly') / WPM;
-    var utilrent = g('utilitiesMonthly') / WPM + monthlyFrom(state.rents, m) / WPM;
-    var projects = g('projectsMonthly') / WPM;
+    // 假设 amounts are ALL per-week (the 假设 page is week-keyed) → no /WPM here. The
+    // *Monthly field ids are legacy names kept for data continuity; values are weekly.
+    // Only the 租金计划 / 固定支出 schedules stay month-based (paid on 到期月份, spread over the month).
+    var seedling = dueMiao > 0 ? dueMiao : g('miaoAmount');                // 苗款: booked AP else 苗金额(元/周) FP
+    var flowering = dueHua > 0 ? dueHua : g('huaAmount');                  // 开花株款: booked AP else 开花株金额(元/周) FP
+    var bottle = dueBottle > 0 ? dueBottle : g('bottleAmount');            // 瓶苗款: booked AP else 瓶苗款(元/周) FP
+    var payroll = g('payrollMonthly');                                     // 元/周
+    var utilrent = g('utilitiesMonthly') + monthlyFrom(state.rents, m) / WPM;   // 水电(周) + 租金计划(按月分摊到周)
+    var projects = g('projectsMonthly');                                   // 元/周
     var dueFreight = freightDueInWeek(state, wIdx);         // 运费 booked (AP) for this 付款周
-    var freight = dueFreight > 0 ? dueFreight : g('freightMonthly') / WPM;  // AP where booked, else FP — never summed
-    var materials = (g('pkgCost') + g('prodCost')) / WPM;   // 生产物料: 元/月, standalone (no longer × 销量)
-    var travel = g('travelWeekly');
-    var loan = g('loanMonthly') / WPM + monthlyFrom(state.fixed, m) / WPM;
+    var freight = dueFreight > 0 ? dueFreight : g('freightMonthly');       // AP where booked, else 周 FP — never summed
+    var materials = g('pkgCost') + g('prodCost');           // 生产物料(周), standalone (no 销量)
+    var travel = g('travelWeekly');                                        // 元/周
+    var loan = g('loanMonthly') + monthlyFrom(state.fixed, m) / WPM;       // 借款(周) + 固定支出(按月分摊到周)
 
     var custom = 0;
     (state.customItems || []).forEach(function (it) {
