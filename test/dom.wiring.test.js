@@ -218,4 +218,16 @@ ok(S().config.fyMode === 'manual' && S().config.startISO === lf.startISO, '切�
 click([...app.querySelectorAll('[data-action="setAsOfMode"]')].find(b => b.dataset.mode === 'auto'));
 ok(S().config.asOfManual === false && S().config.asOfISO === window.FFStore.todayISO(), '截至 切换到自动 → 跟随北京时间今天');
 
+// ---------- 11. 今日 marker tracks the real current date, NOT the 截至 pin ----------
+nav('settings');
+click([...app.querySelectorAll('[data-action="setAsOfMode"]')].find(b => b.dataset.mode === 'manual'));
+const fyEnd = E.weeks(S())[E.weeks(S()).length - 1].endISO;
+setV(window.document.getElementById('c|asOfISO'), fyEnd, 'change');   // the old edge-pin case
+ok(S().config.asOfISO === fyEnd, '截至 pinned to the fiscal-year end');
+nav('dash');
+const Wk = E.weeks(S()), todayIso = window.FFStore.todayISO();
+let expIdx = Wk.findIndex(w => todayIso >= w.startISO && todayIso <= w.endISO);
+if (expIdx < 0) expIdx = todayIso < Wk[0].startISO ? 0 : Wk.length - 1;
+ok(buildView(S()).todayWeekNo === expIdx + 1, '今日 marker = real-today week, independent of the 截至 pin (no longer dragged to the chart edge)');
+
 console.log('\n' + pass + ' wiring assertions passed.\n');

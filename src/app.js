@@ -96,21 +96,33 @@
       varStr: ser.map(function (s, i) { var f = fcCloses[i]; if (!f) return '—'; var p = (acCloses[i] - f) / Math.abs(f) * 100; return (p >= 0 ? '+' : '') + p.toFixed(1) + '%'; }),
       varCol: ser.map(function (s, i) { var f = fcCloses[i]; var p = f ? (acCloses[i] - f) / Math.abs(f) * 100 : 0; return Math.abs(p) < 0.5 ? '#8a8273' : (p >= 0 ? '#6e8348' : '#c24433'); })
     };
-    // 今天 marker: place it at the ACTUAL as-of date, interpolated between the
-    // weekly points (each point i sits at the END of week i), rather than
-    // quantizing to the last fully-elapsed week — otherwise moving the as-of
-    // date within a week wouldn't move the line.
-    var asOfX = (function () {
-      var dayMs = 86400000, t = function (iso) { return new Date(iso + 'T00:00:00Z').getTime(); };
-      var cw = E.currentWeekIdx(S);                       // week containing the as-of date
+    // Position a vertical marker at the interpolated x of any calendar date —
+    // between weekly points (each point i sits at the END of week i) rather than
+    // quantizing to a whole week. Shared by the 截至 divider and the 今日 marker.
+    var _dayMs = 86400000, _tms = function (iso) { return new Date(iso + 'T00:00:00Z').getTime(); };
+    function weekIdxOfISO(iso) {
+      for (var wi = 0; wi < ser.length; wi++) { if (iso >= ser[wi].w.startISO && iso <= ser[wi].w.endISO) return wi; }
+      if (ser.length && iso < ser[0].w.startISO) return 0;
+      return Math.max(ser.length - 1, 0);
+    }
+    function markX(iso) {
+      var cw = weekIdxOfISO(iso);
       if (!ser[cw]) return +xs(lastHist).toFixed(1);
-      var endCur = t(ser[cw].w.endISO);
-      var endPrev = cw > 0 && ser[cw - 1] ? t(ser[cw - 1].w.endISO) : t(ser[cw].w.startISO) - dayMs;
-      var g = endCur > endPrev ? (t(S.config.asOfISO) - endPrev) / (endCur - endPrev) : 1;
+      var endCur = _tms(ser[cw].w.endISO);
+      var endPrev = cw > 0 && ser[cw - 1] ? _tms(ser[cw - 1].w.endISO) : _tms(ser[cw].w.startISO) - _dayMs;
+      var g = endCur > endPrev ? (_tms(iso) - endPrev) / (endCur - endPrev) : 1;
       var frac = (cw - 1) + Math.max(0, Math.min(1, g));
-      frac = Math.max(0, Math.min(ser.length - 1, frac));
-      return +xs(frac).toFixed(1);
-    })();
+      return +xs(Math.max(0, Math.min(ser.length - 1, frac))).toFixed(1);
+    }
+    // 截至 (as-of) = the solid↔dotted divider. 今日 = the REAL current date (Beijing
+    // time), independent of any pinned 截至 — the x-axis still spans the whole 农历财年,
+    // so 今日 sits where today truly falls (never dragged to the chart's terminal edge).
+    var asOfX = markX(S.config.asOfISO);
+    var todayISO = FFStore.todayISO();
+    var todayX = markX(todayISO);
+    var todayWeekNo = weekIdxOfISO(todayISO) + 1;
+    var _tp = todayISO.split('-');
+    var todayMD = _tp.length === 3 ? (+_tp[1]) + '月' + (+_tp[2]) + '日' : '';
     // Extend the solid ACTUAL line flat to the 今天 mark: the in-progress week
     // has no actuals yet, so carry the last known balance forward. This keeps
     // "solid behind today, dotted (forecast) ahead" aligned exactly to the mark.
@@ -359,7 +371,8 @@
       fyYearLabel: E.lunarYearLabel(E.lunarFY(S.config.asOfISO).year), fyWeeks: E.weeks(S).length,
       asOfManual: !!S.config.asOfManual,
       dashKpis: dashKpis, varAggStr: varAggStr, varAggColor: varAggColor,
-      yTicks: yTicks, xTicks: xTicks, trajArea: trajArea, trajForecast: forecastPts, trajActual: actualPts, trajCommitted: committedPts, asOfX: asOfX, asOfWeekNo: curW + 1, asOfDate: asOfMD,
+      yTicks: yTicks, xTicks: xTicks, trajArea: trajArea, trajForecast: forecastPts, trajActual: actualPts, trajCommitted: committedPts,
+      asOfWeekNo: curW + 1, asOfDate: asOfMD, todayX: todayX, todayWeekNo: todayWeekNo, todayMD: todayMD,
       monthBars: monthBars, dashDonut: dashDonut, totalPayWan: wan(totalPay) + '万',
       arTotalWan: fmt(arTotal), arWeekCollectWan: fmt(arWeekCollect),
       selWeekLabel: selWk.label, selCloseWan: fmt(selRow.close),
@@ -456,9 +469,9 @@
       '<polyline points="' + V.trajForecast + '" fill="none" stroke="var(--orchid)" stroke-width="2"' + dash + ' stroke-linecap="round" stroke-linejoin="round"></polyline>' +
       (V.trajCommitted ? '<polyline points="' + V.trajCommitted + '" fill="none" stroke="#3f8f6b" stroke-width="2" stroke-dasharray="5 3" stroke-linecap="round" stroke-linejoin="round"></polyline>' : '') +
       '<polyline points="' + V.trajActual + '" fill="none" stroke="var(--plum)" stroke-width="2.5" stroke-linejoin="round"></polyline>' +
-      '<line x1="' + V.asOfX + '" y1="28" x2="' + V.asOfX + '" y2="218" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="3 3"></line>' +
-      '<text x="' + V.asOfX + '" y="11" text-anchor="middle" style="font-size:10px; fill:var(--gold); font-weight:700;">今日</text>' +
-      '<text x="' + V.asOfX + '" y="22" text-anchor="middle" style="font-size:8.5px; fill:var(--gold);">第' + V.asOfWeekNo + '周 · ' + esc(V.asOfDate) + '</text>' +
+      '<line x1="' + V.todayX + '" y1="28" x2="' + V.todayX + '" y2="218" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="3 3"></line>' +
+      '<text x="' + V.todayX + '" y="11" text-anchor="middle" style="font-size:10px; fill:var(--gold); font-weight:700;">今日</text>' +
+      '<text x="' + V.todayX + '" y="22" text-anchor="middle" style="font-size:8.5px; fill:var(--gold);">第' + V.todayWeekNo + '周 · ' + esc(V.todayMD) + '</text>' +
       '<line id="' + idprefix + 'Guide" x1="0" y1="28" x2="0" y2="218" stroke="var(--plum2)" stroke-width="1" stroke-opacity="0.5" style="opacity:0;"></line>' +
       '<circle id="' + idprefix + 'DotF" r="4" fill="#fff" stroke="var(--orchid)" stroke-width="2" style="opacity:0;"></circle>' +
       '<circle id="' + idprefix + 'DotA" r="4" fill="#fff" stroke="var(--plum)" stroke-width="2" style="opacity:0;"></circle>' +
