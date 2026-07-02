@@ -213,6 +213,14 @@ ok(E.weeks(S())[0].startISO === lf.startISO, '自动模式下周网格起点 = �
 click([...app.querySelectorAll('[data-action="setFyMode"]')].find(b => b.dataset.mode === 'manual'));
 ok(S().config.fyMode === 'manual' && S().config.startISO === lf.startISO, '切回手动并以当前农历窗口预置起止日期');
 
+// hostile manual dates: 起始 later than 结束 must NOT crash — falls back to auto + shows a hint
+const wkBefore = E.weeks(S()).length;
+setV(window.document.getElementById('c|startISO'), '2028-03-01', 'change');   // now start > end
+ok(E.weeks(S()).length === wkBefore && E.weeks(S())[0].startISO === lf.startISO,
+   '起始>结束 的手动窗口不生效 → 回退自动农历窗口（不再产生空周网格/崩溃）');
+ok(app.innerHTML.includes('该窗口无效'), '设置页显示无效日期提示');
+setV(window.document.getElementById('c|startISO'), lf.startISO, 'change');    // restore a valid window
+
 // ---------- 11. 今日 = real today: no 截至 field; 实际 line caps at 今日 ----------
 nav('settings');
 ok([...app.querySelectorAll('[data-action="setAsOfMode"]')].length === 0 && !window.document.getElementById('c|asOfISO'), '设置 has no 截至 controls — 今日 is auto-only');
@@ -221,5 +229,11 @@ const Wk = E.weeks(S());
 let lastH = -1; for (let i = 0; i < Wk.length; i++) if (E.isHist(S(), i)) lastH = i;
 ok(lastH >= 0 && Wk[lastH].endISO <= S().config.asOfISO && (lastH + 1 >= Wk.length || Wk[lastH + 1].endISO > S().config.asOfISO),
    '实际(历史)周止于「今日」所在周 — 实际线不会越过今日 (lastHist=' + lastH + ')');
+
+// ---------- 12. 预测 应付款 caption follows the SELECTED week ----------
+nav('fcst');
+const capW = E.currentWeekIdx(S()) + 3;   // pick a week ≠ the nav default (current+1)
+click([...app.querySelectorAll('[data-action="selectWeek"]')].find(b => +b.dataset.idx === capW));
+ok(app.innerHTML.includes('该周(第' + (capW + 1) + '周)应付苗款合计'), '预测 应付款说明行随所选周变化（不再固定为当前周）');
 
 console.log('\n' + pass + ' wiring assertions passed.\n');

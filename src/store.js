@@ -6,13 +6,13 @@
  * UI calls, notifies subscribers (the renderer) on every change, and
  * persists through a swappable ADAPTER.
  *
- * Persistence seam (important for the China / Cloudflare roadmap):
- *   - Today:   LocalStorageAdapter  → autosaves to the browser.
- *   - Later:   RemoteAdapter        → POST/GET JSON to a Cloudflare
- *              Worker (D1/KV). The skeleton is included below; switching
- *              backends means changing ONE line in app.js (which adapter
- *              you pass to `new Store(...)`). The engine and UI never
- *              touch storage directly, so the swap is isolated here.
+ * Persistence seam:
+ *   - PRODUCTION: RemoteAdapter — debounced PUT of the whole state JSON to
+ *     the Cloudflare Pages Function at /api/state (D1-backed, per user).
+ *     app.js prefetches the state after auth and hands it to the Store.
+ *   - LocalStorageAdapter is kept for local/offline development. Swapping
+ *     backends means changing which adapter app.js passes to `new Store(...)`;
+ *     the engine and UI never touch storage directly.
  * ===================================================================== */
 (function (global) {
   'use strict';

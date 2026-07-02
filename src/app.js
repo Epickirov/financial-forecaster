@@ -58,7 +58,7 @@
       assume: ['假设', '逐周设定 · 默认继承上一周 · 驱动该周预测'],
       seedpay: ['苗/花应付款', '按付款周登记应付苗款 / 开花株款 · 分国内 / 国外 · 含逾期与紧急度汇总'],
       logi: ['物流成本', '各批次运费 · 按付款周计入「生产物资运费」现金流'],
-      ar: ['应收账款', '客户应收余额与每周预计回款'],
+      ar: ['应收账款', '国内/国外应收余额 · 每周新增与已收（已收计入当周收款）'],
       report: ['管理层报告', '一页式 · 非财务人员也能读懂'],
       settings: ['系统设置', '农历财年与起初资金 · 农历年跨年自动切换'],
       tut: ['使用教程', '三步了解 HD / AR / FD 如何录入与联动']
@@ -66,6 +66,12 @@
     // 农历财年 window: AUTO derives from the lunar calendar (rolls yearly), MANUAL uses stored dates
     var fyWin = E.fyWindow(S);
     var fy = (fyWin.startISO || '').slice(2).replace(/-/g, '.') + ' → ' + (fyWin.endISO || '').slice(2).replace(/-/g, '.');
+    // manual window truncated by the 60-week grid cap → tell the user where it actually ends
+    var fyTruncEnd = '';
+    if (S.config.fyMode === 'manual' && E.manualFyOk(S.config)) {
+      var _mw = E.genWeeks(S.config.startISO, S.config.endISO);
+      if (_mw.length && _mw[_mw.length - 1].endISO < S.config.endISO) fyTruncEnd = _mw[_mw.length - 1].endISO;
+    }
 
     // ---- series + chart geometry ----
     var ser = E.series(S);
@@ -167,7 +173,7 @@
     var dashKpis = [
       { label: '现可用款 / 期初', val: fmt(open0), color: 'var(--plum)', sub: '农历财年起始余额', subColor: 'var(--muted)' },
       { label: '全年收款', val: fmt(totalCin), color: 'var(--leaf)', sub: '已收 ' + wan(histCin) + ' · 预测 ' + wan(fcstCin) + ' · 应收(已订) ' + wan(arTotal) + '万', subColor: 'var(--muted)' },
-      { label: '全年支出', val: fmt(totalPay), color: 'var(--rose)', sub: '7 大类合计', subColor: 'var(--muted)' },
+      { label: '全年支出', val: fmt(totalPay), color: 'var(--rose)', sub: '各类支出合计', subColor: 'var(--muted)' },
       { label: '年末预计余额', val: fmt(yearEnd), color: 'var(--plum2)', sub: (yearEnd >= open0 ? '↑ 较期初增长' : '↓ 较期初下降'), subColor: yearEnd >= open0 ? 'var(--leaf)' : 'var(--rose)' },
       { label: '最低现金谷底', val: fmt(minClose), color: minClose < 1000000 ? 'var(--rose)' : 'var(--gold)', sub: (minWeek ? minWeek.w.month + '月 (' + minWeek.w.label + ')' : ''), subColor: 'var(--muted)' }
     ];
@@ -200,11 +206,12 @@
     // ---- forecast/historical cash rows (selected week) ----
     var recDefs = E.RECEIPT_DEFS, payRowDefs = E.PAY_ROW_DEFS;
     function fcstRow(f, label) {
+      // the sub-caption must describe the SELECTED (displayed) week, not the current week
       var sub = '';
-      if (f === 'seedling') sub = '本周(第' + (curW + 1) + '周)应付苗款合计 ' + fmt(E.dueInWeek(S, curW, '苗'));
-      else if (f === 'flowering') sub = '本周(第' + (curW + 1) + '周)应付开花株款合计 ' + fmt(E.dueInWeek(S, curW, '花'));
-      else if (f === 'bottle') sub = '本周(第' + (curW + 1) + '周)应付瓶苗款合计 ' + fmt(E.dueInWeek(S, curW, '瓶苗'));
-      else if (f === 'freight') sub = '本周(第' + (curW + 1) + '周)应付运费合计 ' + fmt(E.freightDueInWeek(S, curW));
+      if (f === 'seedling') sub = '该周(第' + (selIdx + 1) + '周)应付苗款合计 ' + fmt(E.dueInWeek(S, selIdx, '苗'));
+      else if (f === 'flowering') sub = '该周(第' + (selIdx + 1) + '周)应付开花株款合计 ' + fmt(E.dueInWeek(S, selIdx, '花'));
+      else if (f === 'bottle') sub = '该周(第' + (selIdx + 1) + '周)应付瓶苗款合计 ' + fmt(E.dueInWeek(S, selIdx, '瓶苗'));
+      else if (f === 'freight') sub = '该周(第' + (selIdx + 1) + '周)应付运费合计 ' + fmt(E.freightDueInWeek(S, selIdx));
       return { key: selIdx + ':' + f, label: label, sub: sub, amt: fmt(E.fcOf(S, selIdx, f)), val: (S.fcst[selIdx + ':' + f]) != null ? S.fcst[selIdx + ':' + f] : '', ph: '≈' + yuan0(E.computed(S, selIdx)[f] || 0) };
     }
     var fcstReceiptRows = recDefs.map(function (d) { return fcstRow(d[0], d[1]); });
@@ -365,6 +372,7 @@
       cfg: S.config, fy: fy, unitLabel: '单位：' + S.config.unit,
       fyMode: S.config.fyMode === 'manual' ? 'manual' : 'auto', fyStartISO: fyWin.startISO, fyEndISO: fyWin.endISO,
       fyYearLabel: E.lunarYearLabel(E.lunarFY(S.config.asOfISO).year), fyWeeks: E.weeks(S).length,
+      fyManualOk: E.manualFyOk(S.config), fyTruncEnd: fyTruncEnd,
       dashKpis: dashKpis, varAggStr: varAggStr, varAggColor: varAggColor,
       yTicks: yTicks, xTicks: xTicks, trajArea: trajArea, trajForecast: forecastPts, trajActual: actualPts, trajCommitted: committedPts,
       asOfX: asOfX, asOfWeekNo: curW + 1, asOfDate: asOfMD,
@@ -865,7 +873,7 @@
         '<div style="font-size:14px; font-weight:700; color:var(--plum2); margin-bottom:10px;">' + esc(r.name) + '</div>' +
         '<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">' +
           '<div><div style="font-size:11.5px; color:var(--muted); margin-bottom:4px;">预计应收金额（余额 · 继承上周）</div>' + fld(r.expKey, r.exp, r.expPh) + '</div>' +
-          '<div><div style="font-size:11.5px; color:var(--muted); margin-bottom:4px;">本周新增应收金额</div>' + fld(r.addKey, r.add) + '</div>' +
+          '<div><div style="font-size:11.5px; color:var(--muted); margin-bottom:4px;">本周新增应收金额（备查记录）</div>' + fld(r.addKey, r.add) + '</div>' +
           '<div><div style="font-size:11.5px; color:#3f8f6b; margin-bottom:4px;">本周已收金额 → 收款</div>' + fld(r.rcvKey, r.rcv) + '</div>' +
         '</div>' +
       '</div>';
@@ -877,7 +885,7 @@
         '<div style="background:#c0613f; color:#fff; border-radius:15px; padding:18px 20px;"><div style="font-size:13px; color:#ecc6ab;">本周应收余额（国内+国外）</div><div class="num" style="font-size:27px; font-weight:600; margin-top:6px;">' + esc(V.arOutWan) + '</div></div>' +
         '<div style="background:#fff; border-radius:15px; padding:18px 20px; box-shadow:0 10px 30px -20px rgba(60,42,28,.34); border:1px solid var(--line);"><div style="font-size:13px; color:var(--muted);">本周已收（计入收款）</div><div class="num" style="font-size:24px; font-weight:600; margin-top:6px; color:var(--leaf);">' + esc(V.arRcvSelWan) + '</div></div>' +
       '</div>' +
-      card('<div style="margin-bottom:12px;">' + h2('应收账款 · ' + V.selWeekLabel) + '<div style="font-size:12px; color:var(--muted);">按渠道（国内 / 国外）逐周登记：预计应收余额（继承上周）· 本周新增 · 本周已收。「本周已收」计入当周「收款」；「预计应收」显示在「假设 · 回款节奏」，并形成现金图上的「现金 + 应收」线。</div></div>' + rows) +
+      card('<div style="margin-bottom:12px;">' + h2('应收账款 · ' + V.selWeekLabel) + '<div style="font-size:12px; color:var(--muted);">按渠道（国内 / 国外）逐周登记：预计应收余额（继承上周）· 本周新增 · 本周已收。「本周已收」计入当周「收款」；「预计应收」显示在「假设 · 回款节奏」，并形成现金图上的「现金 + 应收」线。余额以「预计应收金额」为准（新增/已收后请相应更新它）；「本周新增」仅作备查记录。</div></div>' + rows) +
     '</div>';
   }
 
@@ -947,8 +955,8 @@
       hooks: '应收→绿色点线“已订(AR)”+报告【应收】列；应付/运费→现金轨迹支出（逾期未付会滚入本周）。',
       steps: [
         { hi: 'ar', page: 'ar', where: '应收账款页（要收的钱 · 按国内/国外逐周）', btn: '高亮 应收账款 字段', fields: [
-          ['预计应收金额', '应收余额（继承上周、可改）', '现金+应收 线'],
-          ['本周新增应收金额', '本周新增的应收', '应收余额'],
+          ['预计应收金额', '应收余额（继承上周、可改）——余额以此为准', '现金+应收 线'],
+          ['本周新增应收金额', '本周新增的应收（备查记录，不自动并入余额）', '备查记录'],
           ['本周已收金额', '本周实际收到的应收', '→ 计入本周收款']
         ] },
         { hi: 'ap', page: 'seedpay', where: '苗/花应付款页（要付的货款）', btn: '高亮 苗/花应付款 字段', fields: [
@@ -966,17 +974,17 @@
     fd: {
       label: '未发货 · 预测', cn: '预测数据', color: 'var(--orchid)',
       what: '还没发生的销售与支出。金额和时间都要预测，系统按“单价 × 销量 × 当周回款率”自动算出预计收款。',
-      lifecycle: '先在「假设」设定驱动因子，再到「预测」看结果、按需逐周覆盖。',
+      lifecycle: '先在「假设」逐周设定驱动因子，再到「预测」查看自动生成的结果（只读）。',
       hooks: '橙色点线“预测(FD)”贯穿全年，以及报告里的【预测】列。',
       steps: [
         { hi: 'fd', page: 'assume', where: '假设页（设定驱动因子）', btn: '高亮 假设 驱动因子', fields: [
           ['销售单价(元/株)', '每渠道/规格每株价格', 'FD 收入'],
           ['销量与淘汰(株/周)', '每周株数 + 预测淘汰率', 'FD 收入'],
           ['当周回款率', '当周销售当周收回的比例（0.7=70%）', 'FD 收款时间'],
-          ['种苗/物料/运营 等', '各项支出预测（每月/每周）', 'FP 支出预测']
+          ['种苗/物料/运营 等', '各项支出预测（元/周）', 'FP 支出预测']
         ] },
-        { hi: 'fcst', page: 'fcst', where: '预测页（看结果·逐周覆盖）', btn: '高亮 预测 覆盖框', fields: [
-          ['收款 / 付款 逐周覆盖', '某周想手动改预测值就直接填（留空＝采用假设）', 'FD / FP 覆盖']
+        { hi: 'fcst', page: 'fcst', where: '预测页（只读 · 查看结果）', btn: '查看 预测 页', fields: [
+          ['收款测算 / 付款预测', '全部由「假设」自动生成，本页只读', '想调整→回「假设」选中该周修改']
         ] }
       ]
     }
@@ -1015,15 +1023,25 @@
     };
 
     var fyAuto = V.fyMode === 'auto';
+    var manualHint = '';
+    if (!fyAuto && !V.fyManualOk) {
+      manualHint = '<div style="margin-top:10px; font-size:12px; color:#a3541e; background:#fdf1e4; border:1px solid #e8c9a8; border-radius:9px; padding:8px 11px;">' +
+        '⚠ 手动日期不完整或「起始」晚于「结束」——该窗口无效，系统暂按<b>自动农历窗口</b>（' + esc(V.fyStartISO) + ' → ' + esc(V.fyEndISO) + '）计算。</div>';
+    } else if (!fyAuto && V.fyTruncEnd) {
+      manualHint = '<div style="margin-top:10px; font-size:12px; color:#a3541e; background:#fdf1e4; border:1px solid #e8c9a8; border-radius:9px; padding:8px 11px;">' +
+        '⚠ 周网格最多 60 周：所设结束日期超出部分不计，当前实际覆盖至 <b class="num">' + esc(V.fyTruncEnd) + '</b>。</div>';
+    } else if (!fyAuto) {
+      manualHint = '<div style="margin-top:10px; font-size:11.5px; color:var(--muted);">共 ' + V.fyWeeks + ' 周</div>';
+    }
     var fyBody = fyAuto
       ? readout(esc(V.fyStartISO) + '　→　' + esc(V.fyEndISO), V.fyYearLabel + ' · 共 ' + V.fyWeeks + ' 周 · 正月初一 → 次年除夕')
       : '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' +
           '<span style="font-size:12px; color:var(--muted);">起始</span>' + dateFld('startISO', V.cfg.startISO) +
           '<span style="color:var(--muted);">→</span>' +
-          '<span style="font-size:12px; color:var(--muted);">结束</span>' + dateFld('endISO', V.cfg.endISO) + '</div>';
+          '<span style="font-size:12px; color:var(--muted);">结束</span>' + dateFld('endISO', V.cfg.endISO) + '</div>' + manualHint;
     var fyCard = card(
       '<div class="serif" style="font-size:17px; font-weight:700; margin-bottom:3px;">农历财年</div>' +
-      '<div style="font-size:12.5px; color:var(--muted); margin-bottom:14px;">决定整套系统的周网格与现金流年度范围 · 跨过除夕后自动切换到下一农历年（已预置至 2046 年）</div>' +
+      '<div style="font-size:12.5px; color:var(--muted); margin-bottom:14px;">决定整套系统的周网格与现金流年度范围 · 跨过除夕后自动切换到下一农历年（已预置至 2047 农历年）</div>' +
       '<div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">' +
         seg('setFyMode', 'auto', fyAuto, '自动（按农历）', '根据「今日」自动选用当前农历年度，无需手动调整') +
         seg('setFyMode', 'manual', !fyAuto, '手动指定', '自行设定起止日期，不随农历切换') +
@@ -1382,8 +1400,8 @@
   //  BOOT  (auth-gated, async)
   // ===================================================================
   // Mount the app for an authenticated user. `prefetchedState` (when defined)
-  // short-circuits the /api/state fetch — used after login once we already
-  // have the state, and by the test harness to bypass the network gate.
+  // short-circuits the /api/state fetch — in practice only the test harness
+  // uses it (via enterWithState); the login/boot paths always fetch /api/state.
   function enterApp(prefetchedState) {
     // freezeToday: real loads stamp 今日 = the live Beijing date; the test seam
     // (enterWithState) keeps the fixture's frozen as-of date for deterministic specs.

@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install
+      - run: npm ci                    # reproducible install from the committed lockfile
       - run: npm run test:all          # engine + DOM smoke + wiring — a red suite blocks the deploy
       - run: npm run build             # regenerates dist/ from src/
       - name: Deploy to Cloudflare Pages

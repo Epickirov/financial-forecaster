@@ -76,6 +76,35 @@ test('fyWindow: auto derives from the lunar calendar, manual uses stored dates',
   assert.strictEqual(E.lunarYearLabel(2026), '丙午（马）年', '干支 + 生肖 label for 2026');
 });
 
+test('invalid manual window (reversed/incomplete) falls back to auto — grid never empty, computed() safe', function () {
+  var mk = function (startISO, endISO) { return { config: { fyMode: 'manual', startISO: startISO, endISO: endISO, asOfISO: '2026-06-23' }, assume: {}, rents: [], fixed: [] }; };
+  var rev = mk('2027-03-01', '2027-02-05');            // 起始 later than 结束
+  assert.strictEqual(E.manualFyOk(rev.config), false, 'reversed window flagged invalid');
+  assert.strictEqual(E.fyWindow(rev).startISO, '2026-02-17', 'reversed manual window → auto lunar window');
+  assert.ok(E.weeks(rev).length >= 50, 'grid regenerated from auto, not empty');
+  assert.doesNotThrow(function () { E.computed(rev, 0); E.series(rev); }, 'calc spine safe under a reversed manual window');
+  var half = mk('2026-02-17', '');                     // incomplete: no end date
+  assert.strictEqual(E.manualFyOk(half.config), false, 'missing end date flagged invalid');
+  assert.strictEqual(E.fyWindow(half).startISO, '2026-02-17', 'incomplete manual window → auto');
+  assert.doesNotThrow(function () { E.computed({ config: {} }, 0); }, 'computed() never dereferences an undefined week');
+});
+
+test('genWeeks caps the grid at 60 weeks (manual windows longer than that truncate)', function () {
+  var w = E.genWeeks('2026-02-17', '2028-02-17');      // ~104-week window
+  assert.strictEqual(w.length, 60, 'grid capped at 60 weeks');
+  assert.ok(w[w.length - 1].endISO < '2028-02-17', 'configured end date not reached (truncated)');
+});
+
+test('AR 本周新增 (add) is stored for record-keeping only — balance and cash are unaffected', function () {
+  var s = fresh();
+  var expBefore = E.arExp(s, 20, 'dom');
+  var cinBefore = E.series(s)[20].cin;
+  s.ar = Object.assign({}, s.ar); s.ar['20:dom:add'] = '999999';
+  assert.strictEqual(E.arAdd(s, 20, 'dom'), 999999, 'add value captured');
+  assert.strictEqual(E.arExp(s, 20, 'dom'), expBefore, '预计应收 balance unchanged by 本周新增');
+  approx(E.series(s)[20].cin, cinBefore, 0.001);        // 收款 unchanged: only 本周已收 feeds cash
+});
+
 test('defaultModel ships auto 农历财年; a 2026 as-of yields the legacy fiscal window', function () {
   var d = FFStore.defaultModel();
   assert.strictEqual(d.config.fyMode, 'auto', 'auto by default');

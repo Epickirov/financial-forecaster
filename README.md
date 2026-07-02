@@ -76,8 +76,9 @@ reference/        the original artifact + source spreadsheets (provenance)
   touches the DOM or storage, so it's unit-tested directly in Node.
 - **`store.js`** is the *only* place that knows about persistence. It exposes
   mutators (`editMap`, `editArr`, `addRow`, …), notifies subscribers, and
-  writes through a **persistence adapter**. Today that's `LocalStorageAdapter`;
-  a `RemoteAdapter` skeleton is already in the file.
+  writes through a **persistence adapter**. In production that's the
+  `RemoteAdapter` (debounced PUT to `/api/state`, D1-backed, per user);
+  `LocalStorageAdapter` remains for local/offline development.
 - **`app.js`** rebuilds the page from `state` on every change (single render
   path = never-stale UI), preserving keyboard focus/caret by element id, and
   delegates all input/click events.
@@ -85,7 +86,7 @@ reference/        the original artifact + source spreadsheets (provenance)
 ### The calculation spine
 ```
 周末余额 = 周初余额 + 本周收款 − 本周支出     (chained week → week)
-Week 1 opening balance = 财年期初余额 (editable in the header)
+Week 1 opening balance = 财年期初余额 (editable on the 设置 page)
 ```
 
 ### How the pages connect (every field is wired to its destination)
@@ -93,20 +94,20 @@ Week 1 opening balance = 财年期初余额 (editable in the header)
 | Page | You enter… | …which flows into |
 |------|------------|-------------------|
 | **假设** Assumptions | per-week named drivers (单价/回款率/销量/淘汰率/成本/租金/固定支出), inherited week-to-week | the **forecast** value of every future week |
-| **预测** Forecast | optional per-field overrides | replaces that week's assumption-computed value |
-| **历史数据** Historical | real actuals for elapsed weeks | **replaces** the forecast for that week in the series & variance |
-| **苗款** Seedling payables | supplier / qty / price / **付款日期** | a payable dated inside a week becomes that week's **苗款** outflow |
-| **应收账款** Receivables | per-week **本周预计回款** per customer | **added into the forecast's 国内收款** for that week |
+| **预测** Forecast | — (read-only; adjust via 假设) | shows the assumption-computed 收款测算 / 付款预测 per week |
+| **历史数据** Historical | real actuals for elapsed weeks + 进货验货 shipments | actuals **replace** the forecast for that week; shipments feed 应付款 |
+| **苗/花应付款** Payables | shipment link / 应付金额 / **付款周** / 紧急度 / 已付 | an unpaid payable becomes that week's 苗款/开花株款/瓶苗款 outflow (replacing the assumption) |
+| **应收账款** Receivables | per-week per-channel (国内/国外) ledger: 预计应收 (carries forward) / 本周新增 (record) / **本周已收** | 本周已收 **adds into that week's 收款**; 预计应收 forms the 现金＋应收 line |
+| **设置** Settings | 农历财年 (auto/manual) + 起初资金 | the week grid and the opening balance of week 1 |
 | **总览 / 报告** | — (read-only) | KPIs, the actual-vs-forecast chart, variance, narrative |
 
-### What was fixed vs. the prototype
-1. **应收账款 → 国内收款**: the per-week expected collection now actually feeds
-   the forecast's domestic collection (it was stored but never used). The 收款测算
-   panel shows it as an explicit, reconciling line (销售回款 ＋ 应收账款回款).
-2. **期初余额** is now editable (header), instead of a hard-coded constant.
-3. **苗款 备注** column added (the field existed in the data but had no input).
-4. **紧急度** select is now colour-coded by tier (amber/grey/green/blue).
-5. Removed the proprietary runtime + all foreign-CDN dependencies.
+### Key behaviors
+1. **收款 two-pot rule**: weekly 收款 = FD new-sales collection (单价×销量×当周回款率)
+   ＋ 应收账款「本周已收」— two separate pots, never double-counted.
+2. **Booked replaces forecast**: a payable/freight booked into a 付款周 **replaces**
+   that week's assumption baseline for its category (never summed on top).
+3. **紧急度** select is colour-coded by tier (amber/grey/green/blue).
+4. No proprietary runtime, no foreign-CDN dependencies.
 
 ---
 
@@ -153,6 +154,9 @@ and redeploy the same static files. No engine/UI changes.
 ## Data & units
 - Money is **entered in 元** everywhere; the **单位：万 / 元** toggle only
   changes *display*. `万` shows `123.46万`; `元` shows `¥1,234,567`.
-- Default fiscal year is the lunar boundary **2026-02-17 → 2027-02-05**;
-  changing the dates regenerates the week grid. Everything autosaves to the
-  browser (key `kmty.finance.v3`). **重置数据** restores the seeded demo data.
+- The fiscal year defaults to **自动农历**: the window 正月初一 → 次年除夕 is derived
+  from a built-in Chinese-New-Year table (2024–2048) and rolls to the next lunar
+  year automatically; a 手动 mode on the 设置 page allows custom dates (which
+  regenerate the week grid). State persists per authenticated user via
+  `/api/state` (D1); local dev may fall back to the browser (key
+  `kmty.finance.v4`). The app ships as a **blank template** — no seeded figures.

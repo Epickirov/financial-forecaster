@@ -1,6 +1,12 @@
 # Refactor Spec — 收款 (HD/AR/FD) + 付款 (FP/AP/Paid) provenance model
 
-Status: **agreed, pre-implementation.** Branch: `main`.
+Status: **historical / superseded — kept as design record.** The three-state
+provenance model described here IS implemented, but the AR side has since been
+**redesigned**: the per-customer / per-shipment receivables (customers,
+arShipments, 账期/lag, per-category 回款 lag fields) were removed and replaced
+by a per-week 国内/国外 ledger (`state.ar`, fields 预计应收/本周新增/本周已收 —
+see README). The fiscal window is now lunar-auto with the date controls on the
+设置 page. Where this document and the code disagree, the code + README win.
 
 This document is the implementation contract for reworking the forecaster around an
 explicit three-state lifecycle on both the inflow (收款) and outflow (付款) sides.

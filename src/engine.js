@@ -71,18 +71,20 @@
   function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
   // ---------- 农历财年 (lunar fiscal year) ---------------------------------
-  // 正月初一 (Chinese New Year / Spring Festival) Gregorian dates, 2024–2046.
+  // 正月初一 (Chinese New Year / Spring Festival) Gregorian dates, 2024–2048.
   // The company's 农历财年 runs 正月初一 → the day BEFORE next year's 正月初一
   // (i.e. through 除夕), so the fiscal window is keyed to the lunar calendar and
-  // rolls automatically each year. Dates verified against published almanacs;
-  // extend this table to carry the auto window past 2046.
+  // rolls automatically each year. Dates verified against published almanacs.
+  // NOTE: a fiscal window needs the NEXT year's entry too, so the last fully
+  // derivable 农历财年 is the one starting in 2047; extend the table to go further.
   var LUNAR_NEW_YEAR = {
     2024: '2024-02-10', 2025: '2025-01-29', 2026: '2026-02-17', 2027: '2027-02-06',
     2028: '2028-01-26', 2029: '2029-02-13', 2030: '2030-02-03', 2031: '2031-01-23',
     2032: '2032-02-11', 2033: '2033-01-31', 2034: '2034-02-19', 2035: '2035-02-08',
     2036: '2036-01-28', 2037: '2037-02-15', 2038: '2038-02-04', 2039: '2039-01-24',
     2040: '2040-02-12', 2041: '2041-02-01', 2042: '2042-01-22', 2043: '2043-02-10',
-    2044: '2044-01-30', 2045: '2045-02-17', 2046: '2046-02-06'
+    2044: '2044-01-30', 2045: '2045-02-17', 2046: '2046-02-06', 2047: '2047-01-26',
+    2048: '2048-02-14'
   };
 
   // shift an ISO calendar date by whole days, entirely in UTC (no timezone drift)
@@ -129,12 +131,18 @@
     }
     return weeks;
   }
-  // resolve the active fiscal window: MANUAL uses the stored dates; AUTO (default)
-  // derives 正月初一→次年除夕 from the lunar calendar based on the as-of date, so it
-  // rolls to the next 农历财年 on its own once 今日 passes the year-end.
+  // a manual window is usable only when both dates exist AND start < end — a
+  // reversed/incomplete window would generate an EMPTY week grid and crash every
+  // downstream calc, so fyWindow falls back to the auto lunar window instead.
+  function manualFyOk(cfg) { return !!(cfg && cfg.startISO && cfg.endISO && cfg.startISO < cfg.endISO); }
+
+  // resolve the active fiscal window: MANUAL uses the stored dates (when valid);
+  // AUTO (default) derives 正月初一→次年除夕 from the lunar calendar based on the
+  // as-of date, so it rolls to the next 农历财年 on its own once 今日 passes the
+  // year-end. Invalid manual dates → auto, so the grid is never empty.
   function fyWindow(state) {
     var cfg = (state && state.config) || {};
-    if (cfg.fyMode === 'manual' && cfg.startISO && cfg.endISO) return { startISO: cfg.startISO, endISO: cfg.endISO };
+    if (cfg.fyMode === 'manual' && manualFyOk(cfg)) return { startISO: cfg.startISO, endISO: cfg.endISO };
     var w = lunarFY(cfg.asOfISO);
     return { startISO: w.startISO, endISO: w.endISO, year: w.year };
   }
@@ -318,7 +326,7 @@
   // ---------- the assumption-driven forecast for ONE week ------------------
   function computed(state, wIdx) {
     var W = weeks(state), wk = W[wIdx] || W[0];
-    var m = wk.month;
+    var m = wk ? wk.month : 0;   // empty grid (shouldn't happen — fyWindow guards) → no monthly schedules
     var g = function (id) { return effAN(state, wIdx, id); };
     var keep = 1 - g('defectRate'); // 预测淘汰率 reduces sellable quantity
 
@@ -478,7 +486,7 @@
     URGENCY_OPTIONS: URGENCY_OPTIONS, URGENCY_COLORS: URGENCY_COLORS,
     AR_CH: AR_CH,
     num: num,
-    LUNAR_NEW_YEAR: LUNAR_NEW_YEAR, isoAddDays: isoAddDays, lunarFY: lunarFY, lunarYearLabel: lunarYearLabel, fyWindow: fyWindow,
+    LUNAR_NEW_YEAR: LUNAR_NEW_YEAR, isoAddDays: isoAddDays, lunarFY: lunarFY, lunarYearLabel: lunarYearLabel, fyWindow: fyWindow, manualFyOk: manualFyOk,
     genWeeks: genWeeks, weeks: weeks, currentWeekIdx: currentWeekIdx,
     effA: effA, inheritedA: inheritedA, effAN: effAN, monthlyFrom: monthlyFrom,
     shipmentById: shipmentById, shipUnit: shipUnit, payableMeta: payableMeta, payableAmt: payableAmt,

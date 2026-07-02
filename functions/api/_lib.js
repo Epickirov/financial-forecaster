@@ -69,12 +69,14 @@ function readCookie(request) {
 }
 
 // Mint a session, store only its hash. Returns the raw token for the cookie.
+// expires_at is computed IN SQL so it has the same text format datetime('now')
+// produces — mixing in an ISO-8601 string ('...T...Z') would make the string
+// comparison in getUser off by up to a day.
 export async function createSession(db, userId) {
   const token = newToken();
   const tokenHash = await sha256Hex(token);
-  const expires = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString();
-  await db.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
-    .bind(tokenHash, userId, expires).run();
+  await db.prepare("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, datetime('now', ?))")
+    .bind(tokenHash, userId, `+${SESSION_DAYS} days`).run();
   return { token, maxAge: SESSION_DAYS * 86400 };
 }
 

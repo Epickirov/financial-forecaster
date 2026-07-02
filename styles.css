@@ -103,12 +103,14 @@ summary::marker{ content:''; }
 /* ---- interactive tutorial: glow the fields for the selected stage -------- */
 @keyframes tutPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(181,134,47,0); } 50%{ box-shadow:0 0 0 5px rgba(181,134,47,.30); } }
 #app[data-tut="hd"] input[data-map="sales"][data-key$="amt"],
+#app[data-tut="hd"] input[data-map="sales"][data-key$="qty"],
 #app[data-tut="hd"] input[data-map="actual"],
+#app[data-tut="hd"] input[data-arr="shipments"],
+#app[data-tut="hd"] select[data-arr="shipments"],
 #app[data-tut="ar"] input[data-map="ar"],
 #app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="price"],
 #app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="qty"],
 #app[data-tut="fd"] input[data-map="assumeWeek"][data-key*="collectInWeek"],
-#app[data-tut="fcst"] input[data-map="fcst"],
 #app[data-tut="ap"] select[data-arr="payables"][data-key="shipmentId"],
 #app[data-tut="ap"] input[data-arr="payables"][data-key="amount"],
 #app[data-tut="freight"] input[data-arr="shipments"][data-key="freight"]{

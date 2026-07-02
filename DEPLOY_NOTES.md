@@ -1,12 +1,14 @@
 # Deploy notes / handoff
 
-Working branch: **`claude/amazing-hypatia-d0c7n6`** (all app work is here).
+Working branch: **`main`** (single branch; all app work lands here).
 
 ## Goal
-Deploy the static app (repo root: `index.html` + `styles.css` + `src/*`) to
-**Cloudflare Pages** on the owner's account (the correct email — a fresh,
-minimally-scoped API token was created for it). Backend (Worker + D1) comes
-later via the `RemoteAdapter` seam in `src/store.js`.
+Deploy the app to **Cloudflare Pages** on the owner's account. The build is
+**dist-based**: `npm run build` copies `index.html` + `styles.css` + `src/*`
+into `dist/`, and the committed `wrangler.toml` sets
+`pages_build_output_dir = "dist"` (plus the D1 binding). The backend
+(Pages Functions in `functions/` + D1) is live via the `RemoteAdapter`
+in `src/store.js`.
 
 ## ⚠️ Shared-account guardrail (must respect)
 A DIFFERENT project already exists on this Cloudflare account. **Do not touch
@@ -26,24 +28,17 @@ to Pages/Workers/D1 Edit only, rotate if needed). Network access is set to
 **Custom** including `api.cloudflare.com` and `*.cloudflare.com` plus the
 default package registries.
 
-## First steps in the new session (in order)
-```bash
-git fetch origin && git checkout claude/amazing-hypatia-d0c7n6   # get the app
-npx wrangler whoami                                              # MUST show the correct account/email — stop if not
-# read-only inventory: confirm our names don't collide with the existing project
-npx wrangler pages project list
-npx wrangler d1 list
-npx wrangler kv namespace list
-```
-Only after `whoami` shows the right account AND the inventory shows no
-`kmty-financial-forecaster` collision:
-```bash
-# scaffold a secrets-free wrangler.toml (name = kmty-financial-forecaster, pages_build_output_dir = ".")
-npx wrangler pages deploy . --project-name kmty-financial-forecaster
-```
+## Deploying
+**Automatic:** every push to `main` runs `.github/workflows/deploy.yml`
+(tests → build → deploy to production). One-time setup: add the
+`CLOUDFLARE_API_TOKEN` repository secret on GitHub.
 
-## Tests (regression safety before deploying)
+**Manual (fallback):**
 ```bash
-npm test          # engine, zero-dep
-npm install && npm run test:dom   # jsdom DOM/wiring tests
+npx wrangler whoami        # MUST show the correct account/email — stop if not
+npm ci && npm run test:all # regression gate: engine + DOM smoke + wiring
+npm run build              # regenerates dist/ from src/
+npx wrangler pages deploy --project-name kmty-financial-forecaster --branch main
 ```
+(`wrangler.toml` supplies `pages_build_output_dir = "dist"`; `functions/` at
+the repo root is bundled automatically.)
