@@ -212,7 +212,7 @@
       else if (f === 'flowering') sub = '该周(第' + (selIdx + 1) + '周)应付开花株款合计 ' + fmt(E.dueInWeek(S, selIdx, '花'));
       else if (f === 'bottle') sub = '该周(第' + (selIdx + 1) + '周)应付瓶苗款合计 ' + fmt(E.dueInWeek(S, selIdx, '瓶苗'));
       else if (f === 'freight') sub = '该周(第' + (selIdx + 1) + '周)应付运费合计 ' + fmt(E.freightDueInWeek(S, selIdx));
-      return { key: selIdx + ':' + f, label: label, sub: sub, amt: fmt(E.fcOf(S, selIdx, f)), val: (S.fcst[selIdx + ':' + f]) != null ? S.fcst[selIdx + ':' + f] : '', ph: '≈' + yuan0(E.computed(S, selIdx)[f] || 0) };
+      return { label: label, sub: sub, amt: fmt(E.fcOf(S, selIdx, f)) };
     }
     var fcstReceiptRows = recDefs.map(function (d) { return fcstRow(d[0], d[1]); });
     var fcstPayRows = payRowDefs.map(function (d) { return fcstRow(d[0], d[1]); });
@@ -322,7 +322,18 @@
       { gid: 'price', title: '销售单价', desc: '每株价格 · 当周回款率（作用于销售收款）', sym: '¥', fields: [fld('priceForLarge', '国外大花 3.5/3.8寸', '元/株'), fld('priceForSmall', '国外小花 2.8/3.0寸', '元/株'), fld('priceForDye', '国外染色花', '元/株'), fld('priceForCut', '国外切花', '元/株'), fld('priceDomLarge', '国内大花 3.5/3.8寸', '元/株'), fld('priceDomSmall', '国内小花 2.8/3.0寸', '元/株'), fld('priceDomDye', '国内染色花', '元/株'), fld('priceDomCut', '国内切花', '元/株'), fld('collectInWeek', '当周回款率', '比例', '0.7 = 当周收回 70%；作用于上方价格×销量的收款')], custom: grpCustom('price') },
       { gid: 'collect', title: '回款节奏 · 应收概览', desc: '应收账款余额（来自「应收账款」页 · 只读）', sym: '%', fields: [], display: '<div style="display:flex; gap:10px; flex-wrap:wrap; font-size:12px;"><div style="flex:1; min-width:90px; background:#faf6ee; border-radius:7px; padding:8px 10px;">国内应收<div class="num" style="font-size:15px; font-weight:700; color:var(--plum2);">' + fmt(E.arExp(S, selIdx, 'dom')) + '</div></div><div style="flex:1; min-width:90px; background:#faf6ee; border-radius:7px; padding:8px 10px;">国外应收<div class="num" style="font-size:15px; font-weight:700; color:var(--plum2);">' + fmt(E.arExp(S, selIdx, 'for')) + '</div></div></div><div style="font-size:10.5px; color:var(--muted); margin-top:8px;">在「应收账款」页逐周录入；此处只读显示当周余额。</div>', custom: grpCustom('collect') },
       { gid: 'volume', title: '销量与淘汰', desc: '各渠道周销量、规格与预测淘汰率', sym: '≋', fields: [fld('qtyForLarge', '国外大花 3.5/3.8寸', '株'), fld('qtyForSmall', '国外小花 2.8/3.0寸', '株'), fld('qtyForDye', '国外染色花', '株'), fld('qtyForCut', '国外切花', '株'), fld('qtyDomLarge', '国内大花 3.5/3.8寸', '株'), fld('qtyDomSmall', '国内小花 2.8/3.0寸', '株'), fld('qtyDomDye', '国内染色花', '株'), fld('qtyDomCut', '国内切花', '株'), fld('defectRate', '预测淘汰率', '比例', '0.05 = 扣减5%可售量')], custom: grpCustom('volume') },
-      { gid: 'seed', title: '种苗应付', desc: '每周应付金额（开花株 / 苗 / 瓶苗）', sym: '❀', fields: [fld('huaAmount', '开花株金额', '元'), fld('miaoAmount', '苗金额', '元'), fld('bottleAmount', '瓶苗款', '元')], custom: grpCustom('seed') },
+      { gid: 'seed', title: '种苗应付', desc: '每周应付金额（开花株 / 苗 / 瓶苗）· 下方为该周已登记应付(AP · 只读)', sym: '❀',
+        // 应付账款 → 假设 的数据跳转（只读）：该周已登记的 AP 会 REPLACE 同类的预测金额（绝不相加）
+        display: (function () {
+          var dm = E.dueInWeek(S, selIdx, '苗'), dh = E.dueInWeek(S, selIdx, '花'), db = E.dueInWeek(S, selIdx, '瓶苗');
+          var apBox = function (label, v) {
+            return '<div style="flex:1; min-width:90px; background:#faf6ee; border-radius:7px; padding:8px 10px;">' + label +
+              '<div class="num" style="font-size:15px; font-weight:700; color:' + (v > 0 ? '#3f8f6b' : 'var(--muted)') + ';">' + fmt(v) + '</div></div>';
+          };
+          return '<div style="display:flex; gap:10px; flex-wrap:wrap; font-size:12px;">' + apBox('苗款 AP', dm) + apBox('开花株款 AP', dh) + apBox('瓶苗款 AP', db) + '</div>' +
+            '<div style="font-size:10.5px; color:var(--muted); margin:8px 0 12px;">来自「苗/花应付款」页（未付 · 该周到期）；某类已登记 AP＞0 时，该周预测取 AP 金额、忽略下方假设值（不相加）。</div>';
+        })(),
+        fields: [fld('huaAmount', '开花株金额', '元'), fld('miaoAmount', '苗金额', '元'), fld('bottleAmount', '瓶苗款', '元')], custom: grpCustom('seed') },
       { gid: 'material', title: '生产物料成本', desc: '每周物料金额（独立 · 不随销量变动）', sym: '▦', fields: [fld('pkgCost', '包装材料', '元'), fld('prodCost', '生产材料', '元')], custom: grpCustom('material') },
       { gid: 'opex', title: '人工 · 水电 · 运费 · 其他', desc: '每周运营支出', sym: '⚙', fields: [fld('payrollMonthly', '工资社保税费', '元'), fld('utilitiesMonthly', '水电费', '元'), fld('freightMonthly', '运费', '元'), fld('projectsMonthly', '项目及工程', '元'), fld('travelWeekly', '差旅招待', '元'), fld('loanMonthly', '房贷/借款', '元')], custom: grpCustom('opex') }
     ];
@@ -663,7 +674,7 @@
     }).join('');
 
     return '<div>' +
-      card('<div style="font-size:13px; font-weight:700; color:var(--plum2); margin-bottom:10px;">选择预测周次 · 默认由假设自动生成，可逐项覆盖</div>' + chips(V.fcstWeeks), ' margin-bottom:16px;') +
+      card('<div style="font-size:13px; font-weight:700; color:var(--plum2); margin-bottom:10px;">选择预测周次 · 全部由假设自动生成（只读）</div>' + chips(V.fcstWeeks), ' margin-bottom:16px;') +
       '<div style="display:grid; grid-template-columns:380px 1fr; gap:16px; align-items:start;">' +
         card('<div class="serif" style="font-size:17px; font-weight:700;">' + esc(V.selWeekLabel) + ' 预测</div>' +
           '<div style="font-size:12px; color:var(--muted); margin:3px 0 14px;">预测值由「假设」自动生成、只读；如需调整请到「假设」页（可逐周覆盖）</div>' +

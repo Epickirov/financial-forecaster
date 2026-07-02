@@ -236,4 +236,16 @@ const capW = E.currentWeekIdx(S()) + 3;   // pick a week ≠ the nav default (cu
 click([...app.querySelectorAll('[data-action="selectWeek"]')].find(b => +b.dataset.idx === capW));
 ok(app.innerHTML.includes('该周(第' + (capW + 1) + '周)应付苗款合计'), '预测 应付款说明行随所选周变化（不再固定为当前周）');
 
+// ---------- 13. 应付账款 → 假设 数据跳转: booked AP shows read-only in 种苗应付 ----------
+nav('assume');
+const apW = (() => { const Wl = E.weeks(S()); for (let i = 0; i < Wl.length; i++) if (E.dueInWeek(S(), i, '苗') > 0) return i; return -1; })();
+ok(apW >= 0, "a week with booked (unpaid) 苗 AP exists (idx " + apW + ")");
+click([...app.querySelectorAll('[data-action="selectWeek"]')].find(b => +b.dataset.idx === apW));
+ok(app.innerHTML.includes('苗款 AP') && app.innerHTML.includes('已登记应付'), "假设·种苗应付 shows the week's booked AP read-only (应付→假设 数据跳转)");
+
+// legacy fcst overrides in a saved state must not skew the read-only 预测
+store.editMap('fcst', E.currentWeekIdx(S()) + 2 + ':foreign', '31415926');
+nav('fcst');
+ok(!app.innerHTML.includes('31,415,926'), '遗留 fcst 覆盖值被忽略 — 预测只由假设驱动');
+
 console.log('\n' + pass + ' wiring assertions passed.\n');

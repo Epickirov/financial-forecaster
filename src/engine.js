@@ -383,10 +383,11 @@
     var w = weeks(state)[wIdx];
     return !!(w && w.endISO <= state.config.asOfISO);
   }
-  // forecast value: manual override on 预测 page, else assumption-computed
+  // forecast value: computed purely from the week's (carried-forward) assumptions.
+  // 预测 is read-only by design — 假设 is the ONLY driver. Legacy state.fcst
+  // overrides (from the removed 预测-page inputs) are deliberately IGNORED so a
+  // stale saved override can never silently skew the forecast away from 假设.
   function fcOf(state, wIdx, field) {
-    var k = wIdx + ':' + field, v = (state.fcst || {})[k];
-    if (v !== undefined && v !== '') { var p = parseFloat(v); return isNaN(p) ? 0 : p; }
     return computed(state, wIdx)[field] || 0;
   }
   // actual value (历史数据), or null if not yet keyed in

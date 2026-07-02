@@ -285,12 +285,11 @@ test('eff returns ACTUAL for elapsed weeks once keyed, FORECAST otherwise', func
   approx(E.eff(s, fut, 'foreign'), E.fcOf(s, fut, 'foreign'));
 });
 
-test('fcOf prefers a manual forecast override', function () {
+test('fcOf is driven purely by 假设 — legacy state.fcst overrides are ignored', function () {
   var s = fresh();
-  s.fcst['20:foreign'] = '999999';
-  assert.strictEqual(E.fcOf(s, 20, 'foreign'), 999999);
-  s.fcst['20:foreign'] = '';            // blank → fall back to computed
-  approx(E.fcOf(s, 20, 'foreign'), E.computed(s, 20).foreign);
+  var pure = E.computed(s, 20).foreign;
+  s.fcst['20:foreign'] = '999999';      // stale override from the removed 预测-page inputs
+  approx(E.fcOf(s, 20, 'foreign'), pure, 0.001);   // must NOT skew the forecast
 });
 
 // ---- the cash spine ------------------------------------------------------
